@@ -107,10 +107,14 @@ async function draw(level) {
   results.replaceChildren();
   message.textContent = "カプセルを準備しています…";
   try {
-    const { data, error } = await db
+    const request = db
       .from("units")
       .select("id,name,level,image_url,description")
       .eq("level", level);
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("データベースからの応答がありません。時間をおいて再度お試しください。")), 12000)
+    );
+    const { data, error } = await Promise.race([request, timeout]);
     if (error) throw error;
     if (!data || data.length === 0) {
       message.textContent = "LEVEL " + level + " のユニットは、まだ登録されていません。";
