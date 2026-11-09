@@ -87,8 +87,12 @@ button:disabled { opacity:.55; cursor:wait; }
     <select id="unit-level"><option value="1">LEVEL 1</option><option value="2">LEVEL 2</option><option value="3">LEVEL 3</option></select>
     <label for="unit-description">説明</label>
     <textarea id="unit-description" placeholder="ユニットの説明"></textarea>
-    <label for="unit-image">画像URL（任意）</label>
-    <input id="unit-image" type="url" placeholder="Supabaseの公開画像URL">
+    <label for="unit-file">画像を選択（iPhoneの写真から選べます）</label>
+    <input id="unit-file" type="file" accept="image/*">
+    <button type="button" onclick="uploadUnitImage()">選んだ画像をアップロード</button>
+    <p class="small">アップロード後、画像URLが自動で入力されます。</p>
+    <label for="unit-image">画像URL（自動入力・手入力も可）</label>
+    <input id="unit-image" type="url" placeholder="画像URL">
     <input id="unit-id" type="hidden">
     <button type="button" onclick="saveUnit()">ユニットを登録</button>
     <button type="button" onclick="resetUnitForm()">入力をクリア</button>
@@ -221,6 +225,40 @@ function resetUnitForm() {
   document.getElementById("unit-level").value = "1";
   document.getElementById("unit-description").value = "";
   document.getElementById("unit-image").value = "";
+}
+
+async function uploadUnitImage() {
+  const status = document.getElementById("admin-status");
+  const fileInput = document.getElementById("unit-file");
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) {
+    status.textContent = "先に画像ファイルを選択してください。";
+    return;
+  }
+  if (!file.type.startsWith("image/")) {
+    status.textContent = "画像ファイルを選択してください。";
+    return;
+  }
+  status.textContent = "画像をアップロードしています…";
+  try {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filePath = "units/" + Date.now() + "_" + safeName;
+    const { data, error } = await db.storage.from("dd-units").upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type
+    });
+    if (error) {
+      status.textContent = "画像アップロードエラー：" + error.message;
+      return;
+    }
+    const { data: publicData } = db.storage.from("dd-units").getPublicUrl(data.path);
+    document.getElementById("unit-image").value = publicData.publicUrl;
+    status.textContent = "画像をアップロードしました。ユニットを登録してください。";
+  } catch (error) {
+    console.error("D.D image upload error:", error);
+    status.textContent = "画像アップロード時の通信エラー：" + (error && error.message ? error.message : String(error));
+  }
 }
 async function saveUnit() {
   const status = document.getElementById("admin-status");
