@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D．D</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px 16px;
+  background: #171b2b;
+  color: white;
+  font-family: sans-serif;
+  text-align: center;
+}
+h1 { font-size: 42px; margin: 20px 0 8px; }
+.subtitle { color: #c5c9d8; margin-bottom: 30px; }
+.machines {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 360px;
+  margin: auto;
+}
+.machine {
+  padding: 22px;
+  border-radius: 18px;
+  background: #292f46;
+  border: 2px solid #59617d;
+}
+.machine h2 { margin: 0 0 12px; }
+.capsule {
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  margin: 10px auto 18px;
+  border: 4px solid white;
+}
+.lv1 { background: #2588ed; }
+.lv2 { background: #35bd75; }
+.lv3 { background: #ed9a32; }
+button {
+  padding: 12px 30px;
+  border: 0;
+  border-radius: 25px;
+  background: #f5d36b;
+  color: #222;
+  font-size: 17px;
+  font-weight: bold;
+}
+#message {
+  margin: 25px auto;
+  padding: 18px;
+  max-width: 360px;
+  background: #292f46;
+  border-radius: 14px;
+  min-height: 65px;
+}
+</style>
+</head>
+<body>
+<h1>D．D</h1>
+<p class="subtitle">ユニットガチャ</p>
+
+<div class="machines">
+  <div class="machine">
+    <h2>LEVEL 1</h2>
+    <div class="capsule lv1"></div>
+    <button onclick="draw(1)">ガチャを回す</button>
+  </div>
+  <div class="machine">
+    <h2>LEVEL 2</h2>
+    <div class="capsule lv2"></div>
+    <button onclick="draw(2)">ガチャを回す</button>
+  </div>
+  <div class="machine">
+    <h2>LEVEL 3</h2>
+    <div class="capsule lv3"></div>
+    <button onclick="draw(3)">ガチャを回す</button>
+  </div>
+</div>
+
+<div id="message">レベルを選んでガチャを回してください！</div>
+
+<script>
+function draw(level) {
+  const colors = ["青", "緑", "オレンジ"];
+  const color = colors[level - 1];
+  document.getElementById("message").innerHTML =
+    "LEVEL " + level + " のカプセルが出ました！<br>" +
+    "カプセルの色：" + color;
+}
+</script>
+</body>
+</html>
