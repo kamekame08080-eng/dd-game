@@ -27,6 +27,17 @@ button:disabled { opacity:.55; cursor:wait; }
 .unit img { display:block; width:100%; max-height:220px; object-fit:contain; border-radius:10px; margin:8px auto; background:#20263a; }
 .unit p { white-space:pre-wrap; line-height:1.6; color:#e0e4ef; }
 .small { color:#aeb6ce; font-size:12px; }
+
+#admin-area { max-width:640px; margin:28px auto; padding:18px; background:#222940; border:1px solid #59617d; border-radius:14px; text-align:left; }
+#admin-area h2 { margin-top:0; text-align:center; }
+#admin-area input,#admin-area select,#admin-area textarea { width:100%; margin:6px 0 12px; padding:11px; border-radius:8px; border:1px solid #707b9a; background:#171b2b; color:#fff; font:inherit; }
+#admin-area textarea { min-height:76px; }
+#admin-area button { margin:5px 4px 5px 0; }
+#admin-status { color:#f5d36b; white-space:pre-wrap; }
+.admin-unit { padding:12px; margin:10px 0; border:1px solid #59617d; border-radius:10px; }
+.admin-unit button { padding:8px 14px; font-size:14px; }
+#admin-toggle { margin:20px auto; background:#59617d; color:#fff; }
+
 </style>
 </head>
 <body>
@@ -55,6 +66,38 @@ button:disabled { opacity:.55; cursor:wait; }
 <div id="message">レベルを選んでガチャを回してください！</div>
 <div id="results" aria-live="polite"></div>
 <p class="small">ユニットの情報はオンラインデータベースから読み込みます。</p>
+
+
+<button id="admin-toggle" type="button" onclick="toggleAdmin()">管理者メニュー</button>
+<section id="admin-area" hidden>
+  <h2>D．D 管理者メニュー</h2>
+  <div id="admin-login">
+    <p>管理者アカウントでログインしてください。</p>
+    <label for="admin-email">メールアドレス</label>
+    <input id="admin-email" type="email" autocomplete="username" placeholder="登録したメールアドレス">
+    <label for="admin-password">パスワード</label>
+    <input id="admin-password" type="password" autocomplete="current-password" placeholder="パスワード">
+    <button type="button" onclick="adminLogin()">ログイン</button>
+  </div>
+  <div id="admin-tools" hidden>
+    <p>ユニットの追加・編集・削除</p>
+    <label for="unit-name">ユニット名</label>
+    <input id="unit-name" placeholder="例：スライム">
+    <label for="unit-level">レベル</label>
+    <select id="unit-level"><option value="1">LEVEL 1</option><option value="2">LEVEL 2</option><option value="3">LEVEL 3</option></select>
+    <label for="unit-description">説明</label>
+    <textarea id="unit-description" placeholder="ユニットの説明"></textarea>
+    <label for="unit-image">画像URL（任意）</label>
+    <input id="unit-image" type="url" placeholder="Supabaseの公開画像URL">
+    <input id="unit-id" type="hidden">
+    <button type="button" onclick="saveUnit()">ユニットを登録</button>
+    <button type="button" onclick="resetUnitForm()">入力をクリア</button>
+    <button type="button" onclick="adminLogout()">ログアウト</button>
+    <p id="admin-status" role="status"></p>
+    <h3>登録済みユニット</h3>
+    <div id="admin-unit-list"></div>
+  </div>
+</section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -136,6 +179,104 @@ async function draw(level) {
     buttons.forEach(button => button.disabled = false);
   }
 }
+
+function toggleAdmin() {
+  const area = document.getElementById("admin-area");
+  area.hidden = !area.hidden;
+}
+async function adminLogin() {
+  const status = document.getElementById("admin-status");
+  status.textContent = "ログインしています…";
+  const { data, error } = await db.auth.signInWithPassword({
+    email: document.getElementById("admin-email").value.trim(),
+    password: document.getElementById("admin-password").value
+  });
+  if (error) { status.textContent = "ログインエラー：" + error.message; return; }
+  const { data: admin, error: adminError } = await db.from("admin_users").select("user_id").eq("user_id", data.user.id).maybeSingle();
+  if (adminError || !admin) {
+    await db.auth.signOut();
+    status.textContent = "このアカウントは管理者として登録されていません。";
+    return;
+  }
+  document.getElementById("admin-login").hidden = true;
+  document.getElementById("admin-tools").hidden = false;
+  status.textContent = "管理者としてログインしました。";
+  await loadAdminUnits();
+}
+async function adminLogout() {
+  await db.auth.signOut();
+  document.getElementById("admin-login").hidden = false;
+  document.getElementById("admin-tools").hidden = true;
+  document.getElementById("admin-password").value = "";
+  document.getElementById("admin-status").textContent = "ログアウトしました。";
+}
+function resetUnitForm() {
+  document.getElementById("unit-id").value = "";
+  document.getElementById("unit-name").value = "";
+  document.getElementById("unit-level").value = "1";
+  document.getElementById("unit-description").value = "";
+  document.getElementById("unit-image").value = "";
+}
+async function saveUnit() {
+  const status = document.getElementById("admin-status");
+  const id = document.getElementById("unit-id").value;
+  const name = document.getElementById("unit-name").value.trim();
+  const level = Number(document.getElementById("unit-level").value);
+  const description = document.getElementById("unit-description").value.trim();
+  const image_url = document.getElementById("unit-image").value.trim() || null;
+  if (!name) { status.textContent = "ユニット名を入力してください。"; return; }
+  status.textContent = "保存しています…";
+  const values = { name, level, description, image_url };
+  const result = id
+    ? await db.from("units").update(values).eq("id", id)
+    : await db.from("units").insert(values);
+  if (result.error) { status.textContent = "保存エラー：" + result.error.message; return; }
+  status.textContent = id ? "ユニットを更新しました。" : "ユニットを登録しました。";
+  resetUnitForm();
+  await loadAdminUnits();
+}
+async function loadAdminUnits() {
+  const list = document.getElementById("admin-unit-list");
+  list.textContent = "読み込み中…";
+  const { data, error } = await db.from("units").select("id,name,level,description,image_url").order("level").order("name");
+  if (error) { list.textContent = "読み込みエラー：" + error.message; return; }
+  list.replaceChildren();
+  if (!data.length) { list.textContent = "登録済みユニットはありません。"; return; }
+  data.forEach(unit => {
+    const item = document.createElement("div");
+    item.className = "admin-unit";
+    const title = document.createElement("strong");
+    title.textContent = "LEVEL " + unit.level + "｜" + unit.name;
+    item.appendChild(title);
+    const desc = document.createElement("p");
+    desc.textContent = unit.description || "説明なし";
+    item.appendChild(desc);
+    const edit = document.createElement("button");
+    edit.type = "button"; edit.textContent = "編集";
+    edit.onclick = () => {
+      document.getElementById("unit-id").value = unit.id;
+      document.getElementById("unit-name").value = unit.name || "";
+      document.getElementById("unit-level").value = String(unit.level);
+      document.getElementById("unit-description").value = unit.description || "";
+      document.getElementById("unit-image").value = unit.image_url || "";
+      document.getElementById("admin-status").textContent = "編集内容を入力欄に読み込みました。";
+      document.getElementById("unit-name").scrollIntoView({behavior:"smooth",block:"center"});
+    };
+    item.appendChild(edit);
+    const del = document.createElement("button");
+    del.type = "button"; del.textContent = "削除";
+    del.onclick = async () => {
+      if (!confirm("「" + unit.name + "」を削除しますか？")) return;
+      const { error: deleteError } = await db.from("units").delete().eq("id", unit.id);
+      if (deleteError) { document.getElementById("admin-status").textContent = "削除エラー：" + deleteError.message; return; }
+      document.getElementById("admin-status").textContent = "ユニットを削除しました。";
+      await loadAdminUnits();
+    };
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
 </script>
 </body>
 </html>
