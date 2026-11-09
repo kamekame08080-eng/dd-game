@@ -78,7 +78,6 @@ button:disabled { opacity:.55; cursor:wait; }
     <label for="admin-password">パスワード</label>
     <input id="admin-password" type="password" autocomplete="current-password" placeholder="パスワード">
     <button type="button" onclick="adminLogin()">ログイン</button>
-    <p id="admin-status" role="status"></p>
   </div>
   <div id="admin-tools" hidden>
     <p>ユニットの追加・編集・削除</p>
@@ -97,6 +96,7 @@ button:disabled { opacity:.55; cursor:wait; }
     <h3>登録済みユニット</h3>
     <div id="admin-unit-list"></div>
   </div>
+  <p id="admin-status" role="status" style="color:#f5d36b;white-space:pre-wrap;text-align:center;"></p>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -231,14 +231,19 @@ async function saveUnit() {
   const image_url = document.getElementById("unit-image").value.trim() || null;
   if (!name) { status.textContent = "ユニット名を入力してください。"; return; }
   status.textContent = "保存しています…";
-  const values = { name, level, description, image_url };
-  const result = id
-    ? await db.from("units").update(values).eq("id", id)
-    : await db.from("units").insert(values);
-  if (result.error) { status.textContent = "保存エラー：" + result.error.message; return; }
-  status.textContent = id ? "ユニットを更新しました。" : "ユニットを登録しました。";
-  resetUnitForm();
-  await loadAdminUnits();
+  try {
+    const values = { name, level, description, image_url };
+    const result = id
+      ? await db.from("units").update(values).eq("id", id)
+      : await db.from("units").insert(values);
+    if (result.error) { status.textContent = "保存エラー：" + result.error.message; return; }
+    status.textContent = id ? "ユニットを更新しました。" : "ユニットを登録しました。";
+    resetUnitForm();
+    await loadAdminUnits();
+  } catch (error) {
+    console.error("D.D save unit error:", error);
+    status.textContent = "保存時の通信エラー：" + (error && error.message ? error.message : String(error));
+  }
 }
 async function loadAdminUnits() {
   const list = document.getElementById("admin-unit-list");
