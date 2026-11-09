@@ -129,8 +129,9 @@ async function draw(level) {
     showUnits(selected, level);
     message.textContent = "LEVEL " + level + " のカプセルが " + selected.length + " 個出ました！";
   } catch (error) {
-    console.error(error);
-    message.textContent = "ユニットを読み込めませんでした。通信状態とデータベース設定を確認してください。";
+    console.error("D.D Supabase error:", error);
+    const detail = error && error.message ? error.message : String(error);
+    message.textContent = "読み込みエラー：" + detail;
   } finally {
     buttons.forEach(button => button.disabled = false);
   }
