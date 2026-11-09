@@ -22,6 +22,10 @@ button:disabled { opacity:.55; cursor:wait; }
 #quantity-value { color:#f5d36b; font-weight:bold; }
 #message { min-height:60px; color:#dce1f2; }
 #results { max-width:640px; margin:20px auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+#history-area { max-width:640px; margin:20px auto; padding:16px; background:#292f46; border-radius:14px; }
+#history-list { margin-top:14px; text-align:left; }
+.history-entry { padding:12px; margin:10px 0; border:1px solid #59617d; border-radius:10px; }
+.history-entry img { width:72px; height:72px; object-fit:contain; vertical-align:middle; margin-right:10px; background:#20263a; border-radius:8px; }
 .unit { text-align:left; padding:14px; background:#292f46; border:1px solid #59617d; border-radius:14px; overflow:hidden; }
 .unit h3 { margin:0 0 8px; color:#f5d36b; }
 .unit img { display:block; width:100%; max-height:220px; object-fit:contain; border-radius:10px; margin:8px auto; background:#20263a; }
@@ -65,6 +69,7 @@ button:disabled { opacity:.55; cursor:wait; }
 </div>
 <div id="message">レベルを選んでガチャを回してください！</div>
 <div id="results" aria-live="polite"></div>
+<div id="history-area"><button type="button" onclick="toggleHistory()">抽選履歴を見る</button><div id="history-list" hidden></div></div>
 <p class="small">ユニットの情報はオンラインデータベースから読み込みます。</p>
 
 
@@ -174,6 +179,7 @@ async function draw(level) {
     await new Promise(resolve => setTimeout(resolve, 900));
     const selected = shuffle(data).slice(0, count);
     showUnits(selected, level);
+    saveDrawHistory(selected, level);
     message.textContent = "LEVEL " + level + " のカプセルが " + selected.length + " 個出ました！";
   } catch (error) {
     console.error("D.D Supabase error:", error);
@@ -182,6 +188,71 @@ async function draw(level) {
   } finally {
     buttons.forEach(button => button.disabled = false);
   }
+}
+
+function saveDrawHistory(units, level) {
+  try {
+    const key = "dd_draw_history_v1";
+    const history = JSON.parse(localStorage.getItem(key) || "[]");
+    const drawnAt = new Date().toISOString();
+    units.forEach(unit => {
+      history.unshift({
+        drawn_at: drawnAt,
+        level: level,
+        name: unit.name || "名前未設定",
+        image_url: unit.image_url || "",
+        description: unit.description || ""
+      });
+    });
+    localStorage.setItem(key, JSON.stringify(history.slice(0, 200)));
+  } catch (error) {
+    console.error("D.D history save error:", error);
+    document.getElementById("message").textContent += "（履歴を保存できませんでした）";
+  }
+}
+function toggleHistory() {
+  const list = document.getElementById("history-list");
+  list.hidden = !list.hidden;
+  if (!list.hidden) renderDrawHistory();
+}
+function renderDrawHistory() {
+  const list = document.getElementById("history-list");
+  let history = [];
+  try {
+    history = JSON.parse(localStorage.getItem("dd_draw_history_v1") || "[]");
+  } catch (error) {
+    list.textContent = "履歴を読み込めませんでした。";
+    return;
+  }
+  list.replaceChildren();
+  if (!history.length) {
+    list.textContent = "まだ抽選履歴はありません。";
+    return;
+  }
+  history.forEach(entry => {
+    const item = document.createElement("div");
+    item.className = "history-entry";
+    const date = document.createElement("div");
+    date.className = "small";
+    date.textContent = new Date(entry.drawn_at).toLocaleString("ja-JP");
+    item.appendChild(date);
+    const title = document.createElement("strong");
+    title.textContent = "LEVEL " + entry.level + "｜" + entry.name;
+    item.appendChild(title);
+    if (entry.image_url) {
+      const img = document.createElement("img");
+      img.src = entry.image_url;
+      img.alt = entry.name;
+      img.loading = "lazy";
+      item.appendChild(img);
+    }
+    if (entry.description) {
+      const desc = document.createElement("p");
+      desc.textContent = entry.description;
+      item.appendChild(desc);
+    }
+    list.appendChild(item);
+  });
 }
 
 function toggleAdmin() {
