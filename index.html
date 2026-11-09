@@ -1,63 +1,32 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>D．D</title>
+<title>D．D｜ユニットガチャ</title>
 <style>
 * { box-sizing: border-box; }
-body {
-  margin: 0;
-  padding: 24px 16px;
-  background: #171b2b;
-  color: white;
-  font-family: sans-serif;
-  text-align: center;
-}
-h1 { font-size: 42px; margin: 20px 0 8px; }
-.subtitle { color: #c5c9d8; margin-bottom: 30px; }
-.machines {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  max-width: 360px;
-  margin: auto;
-}
-.machine {
-  padding: 22px;
-  border-radius: 18px;
-  background: #292f46;
-  border: 2px solid #59617d;
-}
-.machine h2 { margin: 0 0 12px; }
-.capsule {
-  width: 65px;
-  height: 65px;
-  border-radius: 50%;
-  margin: 10px auto 18px;
-  border: 4px solid white;
-}
-.lv1 { background: #2588ed; }
-.lv2 { background: #35bd75; }
-.lv3 { background: #ed9a32; }
-button {
-  padding: 12px 30px;
-  border: 0;
-  border-radius: 25px;
-  background: #f5d36b;
-  color: #222;
-  font-size: 17px;
-  font-weight: bold;
-}
-#message {
-  margin: 25px auto;
-  padding: 18px;
-  max-width: 360px;
-  background: #292f46;
-  border-radius: 14px;
-  min-height: 65px;
-}
+body { margin:0; padding:24px 16px 48px; background:#171b2b; color:#fff; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif; text-align:center; }
+h1 { font-size:42px; margin:12px 0 4px; letter-spacing:2px; }
+.subtitle { color:#c5c9d8; margin:0 0 26px; }
+.machines { display:flex; flex-direction:column; gap:16px; max-width:420px; margin:auto; }
+.machine { padding:20px; border-radius:18px; background:#292f46; border:2px solid #59617d; }
+.machine h2 { margin:0 0 12px; font-size:21px; }
+.capsule { width:66px; height:66px; border-radius:50%; margin:8px auto 16px; border:4px solid white; box-shadow:inset -7px -7px 0 #0002,0 4px 10px #0005; }
+.lv1 { background:#2588ed; } .lv2 { background:#35bd75; } .lv3 { background:#ed9a32; }
+button { padding:12px 28px; border:0; border-radius:25px; background:#f5d36b; color:#222; font-size:16px; font-weight:bold; cursor:pointer; }
+button:disabled { opacity:.55; cursor:wait; }
+#quantity-area,#message { margin:22px auto; padding:18px; max-width:420px; background:#292f46; border-radius:14px; }
+#quantity-area label { display:block; margin-bottom:10px; }
+#quantity { width:100%; accent-color:#f5d36b; }
+#quantity-value { color:#f5d36b; font-weight:bold; }
+#message { min-height:60px; color:#dce1f2; }
+#results { max-width:640px; margin:20px auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+.unit { text-align:left; padding:14px; background:#292f46; border:1px solid #59617d; border-radius:14px; overflow:hidden; }
+.unit h3 { margin:0 0 8px; color:#f5d36b; }
+.unit img { display:block; width:100%; max-height:220px; object-fit:contain; border-radius:10px; margin:8px auto; background:#20263a; }
+.unit p { white-space:pre-wrap; line-height:1.6; color:#e0e4ef; }
+.small { color:#aeb6ce; font-size:12px; }
 </style>
 </head>
 <body>
@@ -66,31 +35,101 @@ button {
 
 <div class="machines">
   <div class="machine">
-    <h2>LEVEL 1</h2>
-    <div class="capsule lv1"></div>
-    <button onclick="draw(1)">ガチャを回す</button>
+    <h2>LEVEL 1</h2><div class="capsule lv1"></div>
+    <button class="draw-button" onclick="draw(1)">LEVEL 1 を回す</button>
   </div>
   <div class="machine">
-    <h2>LEVEL 2</h2>
-    <div class="capsule lv2"></div>
-    <button onclick="draw(2)">ガチャを回す</button>
+    <h2>LEVEL 2</h2><div class="capsule lv2"></div>
+    <button class="draw-button" onclick="draw(2)">LEVEL 2 を回す</button>
   </div>
   <div class="machine">
-    <h2>LEVEL 3</h2>
-    <div class="capsule lv3"></div>
-    <button onclick="draw(3)">ガチャを回す</button>
+    <h2>LEVEL 3</h2><div class="capsule lv3"></div>
+    <button class="draw-button" onclick="draw(3)">LEVEL 3 を回す</button>
   </div>
 </div>
 
+<div id="quantity-area">
+  <label for="quantity">今回引くユニット数：<span id="quantity-value">1</span>体</label>
+  <input id="quantity" type="range" min="1" max="4" value="1" oninput="document.getElementById('quantity-value').textContent=this.value">
+</div>
 <div id="message">レベルを選んでガチャを回してください！</div>
+<div id="results" aria-live="polite"></div>
+<p class="small">ユニットの情報はオンラインデータベースから読み込みます。</p>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-function draw(level) {
-  const colors = ["青", "緑", "オレンジ"];
-  const color = colors[level - 1];
-  document.getElementById("message").innerHTML =
-    "LEVEL " + level + " のカプセルが出ました！<br>" +
-    "カプセルの色：" + color;
+const SUPABASE_URL = "https://ddmiwtrdsrevqajbjrgx.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YTD-Q9dckugZjxvEG3I1DA_dy14gKPg";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+function shuffle(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function showUnits(units, level) {
+  const results = document.getElementById("results");
+  results.replaceChildren();
+  units.forEach((unit, index) => {
+    const card = document.createElement("article");
+    card.className = "unit";
+    const heading = document.createElement("h3");
+    heading.textContent = "カプセル " + (index + 1) + "｜" + (unit.name || "名前未設定");
+    card.appendChild(heading);
+    const levelText = document.createElement("div");
+    levelText.className = "small";
+    levelText.textContent = "LEVEL " + level;
+    card.appendChild(levelText);
+    if (unit.image_url) {
+      const img = document.createElement("img");
+      img.src = unit.image_url;
+      img.alt = unit.name || "ユニット画像";
+      img.loading = "lazy";
+      card.appendChild(img);
+    }
+    const description = document.createElement("p");
+    description.textContent = unit.description || "説明はまだ登録されていません。";
+    card.appendChild(description);
+    results.appendChild(card);
+  });
+}
+
+async function draw(level) {
+  const buttons = [...document.querySelectorAll(".draw-button")];
+  const message = document.getElementById("message");
+  const results = document.getElementById("results");
+  const count = Number(document.getElementById("quantity").value);
+  buttons.forEach(button => button.disabled = true);
+  results.replaceChildren();
+  message.textContent = "カプセルを準備しています…";
+  try {
+    const { data, error } = await db
+      .from("units")
+      .select("id,name,level,image_url,description")
+      .eq("level", level);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      message.textContent = "LEVEL " + level + " のユニットは、まだ登録されていません。";
+      return;
+    }
+    if (data.length < count) {
+      message.textContent = "このレベルの登録ユニットは " + data.length + " 体です。引く数を " + data.length + " 体以下にしてください。";
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 900));
+    const selected = shuffle(data).slice(0, count);
+    showUnits(selected, level);
+    message.textContent = "LEVEL " + level + " のカプセルが " + selected.length + " 個出ました！";
+  } catch (error) {
+    console.error(error);
+    message.textContent = "ユニットを読み込めませんでした。通信状態とデータベース設定を確認してください。";
+  } finally {
+    buttons.forEach(button => button.disabled = false);
+  }
 }
 </script>
 </body>
