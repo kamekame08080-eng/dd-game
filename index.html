@@ -85,7 +85,7 @@ button:disabled { opacity:.55; cursor:wait; }
 .dice-outcome { padding:10px 12px; border-radius:9px; background:#292f46; border-left:4px solid #7d879f; font-size:14px; line-height:1.6; }
 .dice-outcome.success { border-left-color:#35bd75; }
 .dice-outcome.failure { border-left-color:#ff6b78; }
-#dice-roll { width:100%; margin-top:10px; background:#f5d36b; }
+#dice-roll { width:100%; margin-top:10px; background:linear-gradient(135deg,#ffe879,#ffbd45); color:#493016; font-family:"Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif; font-size:clamp(20px,5vw,26px); font-weight:1000; font-style:italic; letter-spacing:2px; text-shadow:1px 2px 0 #fff5b8; border:3px solid #fff0a6; border-radius:16px; box-shadow:0 5px 0 #b77b24,0 8px 14px #0005; padding:13px 10px; transition:transform .12s,box-shadow .12s; }\n#dice-roll:not(:disabled):active { transform:translateY(4px) scale(.98); box-shadow:0 1px 0 #b77b24,0 3px 8px #0005; }\n#dice-roll:disabled { opacity:.55; }
 #dice-status { min-height:22px; color:#f5d36b; font-size:13px; }
 @keyframes dice-tumble {
   0% { transform:translateY(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
@@ -234,7 +234,7 @@ button:disabled { opacity:.55; cursor:wait; }
         <div class="dice-unit-label" id="dice-label-yellow">ユニット未選択</div>
       </div>
     </div>
-    <button id="dice-roll" type="button" onclick="rollSummonDice()" disabled>3個同時にサイコロを振る！</button>
+    <button id="dice-roll" type="button" onclick="rollSummonDice()" disabled>DISE ROLL！</button>
     <p id="dice-status" aria-live="polite">抽選履歴から3個のユニットを選んでください。</p>
     <div id="dice-outcomes" class="dice-outcomes" aria-live="polite"></div>
   </div>
