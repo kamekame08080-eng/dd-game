@@ -199,7 +199,7 @@ button:disabled { opacity:.55; cursor:wait; }
 
   <div class="dice-area">
     <h3>🎲 召喚サイコロ</h3>
-    <p class="dice-help">抽選履歴からユニットを選び、赤・青・黄色のサイコロに割り当てます。同じユニットを複数の色に割り当てることもできます。</p>
+    <p class="dice-help">赤・青・黄色は抽選履歴から選択します。メタリックダイスには管理者メニューで登録したLEVEL 4を割り当てます。</p>
     <button id="dice-add-metal" class="dice-add-button" type="button" onclick="toggleMetalDice()">＋ メタリックダイスを追加</button>
     <div class="dice-assignments">
       <div class="dice-assignment">
@@ -258,7 +258,7 @@ button:disabled { opacity:.55; cursor:wait; }
       </div>
     </div>
     <button id="dice-roll" type="button" onclick="rollSummonDice()" disabled>DISE ROLL！</button>
-    <p id="dice-status" aria-live="polite">抽選履歴から3個のユニットを選んでください。</p>
+    <p id="dice-status" aria-live="polite">赤・青・黄色のユニットを選んでください。メタリックダイスを追加した場合はLEVEL 4も選択してください。</p>
     <div id="dice-outcomes" class="dice-outcomes" aria-live="polite"></div>
   </div>
 
@@ -339,7 +339,7 @@ function toggleGameSupport() {
   main.hidden = opening;
   document.getElementById("support-open").textContent = opening ? "ガチャページに戻る" : "ゲームサポートを開く";
   try { localStorage.setItem("dd_game_support_view_v1", opening ? "support" : "gacha"); } catch (error) {}
-  if (opening) renderLives();
+  if (opening) { renderLives(); renderDiceAssignments(); }
 }
 function renderLives() {
   ["a", "b"].forEach(player => {
