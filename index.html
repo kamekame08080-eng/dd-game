@@ -33,6 +33,17 @@ button:disabled { opacity:.55; cursor:wait; }
 .unit img { display:block; width:100%; max-height:220px; object-fit:contain; border-radius:10px; margin:8px auto; background:#20263a; }
 .unit p { white-space:pre-wrap; line-height:1.6; color:#e0e4ef; }
 .small { color:#aeb6ce; font-size:12px; }
+#support-open { margin:8px auto 22px; background:#35bd75; color:#102016; }
+#game-support { max-width:640px; margin:20px auto; padding:18px; background:#222940; border:1px solid #59617d; border-radius:16px; }
+.support-players { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.support-player { padding:18px 8px; border-radius:14px; background:#292f46; border:1px solid #59617d; }
+.support-player h3 { margin:0 0 14px; color:#f5d36b; }
+.life-button { display:block; width:100%; padding:12px 4px; margin:0 auto 10px; background:transparent; color:#ff6b78; font-size:30px; letter-spacing:3px; }
+.life-count { margin:4px 0 12px; font-size:22px; font-weight:bold; }
+.life-controls { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
+.life-controls button { padding:9px 13px; font-size:14px; }
+#support-status { min-height:22px; color:#f5d36b; }
+@media(max-width:380px) { .support-players { gap:7px; } .support-player { padding:14px 5px; } .life-button { font-size:24px; } }
 
 #admin-area { max-width:640px; margin:28px auto; padding:18px; background:#222940; border:1px solid #59617d; border-radius:14px; text-align:left; }
 #admin-area h2 { margin-top:0; text-align:center; }
@@ -49,7 +60,9 @@ button:disabled { opacity:.55; cursor:wait; }
 <body>
 <h1>D．D</h1>
 <p class="subtitle">ユニットガチャ</p>
+<button id="support-open" type="button" onclick="toggleGameSupport()">ゲームサポートを開く</button>
 
+<main id="main-page">
 <div class="machines">
   <div class="machine">
     <h2>LEVEL 1</h2><div class="capsule lv1"></div>
@@ -110,12 +123,81 @@ button:disabled { opacity:.55; cursor:wait; }
   </div>
   <p id="admin-status" role="status" style="color:#f5d36b;white-space:pre-wrap;text-align:center;"></p>
 </section>
+</main>
+
+<section id="game-support" hidden>
+  <h2>ゲームサポート</h2>
+  <p class="small">プレイヤーごとの重要ユニットのライフを管理します。</p>
+  <div class="support-players">
+    <div class="support-player">
+      <h3>プレイヤー A</h3>
+      <button class="life-button" type="button" aria-label="プレイヤーAのライフを1減らす" onclick="changeLife('a',-1)"><span id="life-hearts-a">♥ ♥ ♥</span></button>
+      <div class="life-count" id="life-count-a">LIFE 3 / 3</div>
+      <div class="life-controls">
+        <button type="button" onclick="changeLife('a',1)">＋ 回復</button>
+        <button type="button" onclick="resetLife('a')">3に戻す</button>
+      </div>
+    </div>
+    <div class="support-player">
+      <h3>プレイヤー B</h3>
+      <button class="life-button" type="button" aria-label="プレイヤーBのライフを1減らす" onclick="changeLife('b',-1)"><span id="life-hearts-b">♥ ♥ ♥</span></button>
+      <div class="life-count" id="life-count-b">LIFE 3 / 3</div>
+      <div class="life-controls">
+        <button type="button" onclick="changeLife('b',1)">＋ 回復</button>
+        <button type="button" onclick="resetLife('b')">3に戻す</button>
+      </div>
+    </div>
+  </div>
+  <p id="support-status" aria-live="polite">ハートをタップするとライフが1減ります。</p>
+  <button type="button" onclick="resetAllLife()">両プレイヤーを3に戻す</button>
+  <button type="button" onclick="toggleGameSupport()">ガチャページに戻る</button>
+</section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://ddmiwtrdsrevqajbjrgx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YTD-Q9dckugZjxvEG3I1DA_dy14gKPg";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const playerLives = { a: 3, b: 3 };
+function toggleGameSupport() {
+  const support = document.getElementById("game-support");
+  const main = document.getElementById("main-page");
+  const opening = support.hidden;
+  support.hidden = !opening;
+  main.hidden = opening;
+  document.getElementById("support-open").textContent = opening ? "ガチャページに戻る" : "ゲームサポートを開く";
+  if (opening) renderLives();
+}
+function renderLives() {
+  ["a", "b"].forEach(player => {
+    const life = playerLives[player];
+    document.getElementById("life-hearts-" + player).textContent =
+      Array.from({length:3}, (_, i) => i < life ? "♥" : "♡").join(" ");
+    document.getElementById("life-count-" + player).textContent = "LIFE " + life + " / 3";
+  });
+}
+function changeLife(player, amount) {
+  const next = Math.max(0, Math.min(3, playerLives[player] + amount));
+  if (next === playerLives[player]) {
+    document.getElementById("support-status").textContent = amount < 0 ? "ライフはこれ以上減らせません。" : "ライフは3が最大です。";
+    return;
+  }
+  playerLives[player] = next;
+  renderLives();
+  document.getElementById("support-status").textContent =
+    "プレイヤー " + player.toUpperCase() + " のライフ：" + next;
+}
+function resetLife(player) {
+  playerLives[player] = 3;
+  renderLives();
+  document.getElementById("support-status").textContent = "プレイヤー " + player.toUpperCase() + " のライフを3に戻しました。";
+}
+function resetAllLife() {
+  playerLives.a = 3;
+  playerLives.b = 3;
+  renderLives();
+  document.getElementById("support-status").textContent = "両プレイヤーのライフを3に戻しました。";
+}
 let lastDrawResult = null;
 let lastPngUrl = null;
 
