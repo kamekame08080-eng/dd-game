@@ -139,7 +139,9 @@ button:disabled { opacity:.55; cursor:wait; }
 
 <div id="quantity-area">
   <label for="quantity">今回引くユニット数：<span id="quantity-value">1</span>体</label>
-  <input id="quantity" type="range" min="1" max="4" value="1" oninput="document.getElementById('quantity-value').textContent=this.value">
+  <input id="quantity" type="range" min="1" max="15" value="1" oninput="document.getElementById('quantity-value').textContent=this.value">
+  <p id="remaining-draws" style="margin:14px 0 8px;color:#f5d36b;font-weight:bold;">このゲームで引ける残りユニット数：15体</p>
+  <button type="button" onclick="startNewGame()">新しいゲームを始める</button>
 </div>
 <div id="message">レベルを選んでガチャを回してください！</div>
 <div id="results" aria-live="polite"></div>
@@ -584,6 +586,47 @@ renderDiceAssignments();
 loadGameSupportState();
 let lastDrawResult = null;
 let lastPngUrl = null;
+const MAX_GAME_DRAWS = 15;
+const GAME_DRAWS_KEY = "dd_game_draws_used_v1";
+let gameDrawsUsed = 0;
+loadGameDrawCount();
+
+function loadGameDrawCount() {
+  try {
+    const saved = Number(localStorage.getItem(GAME_DRAWS_KEY) || 0);
+    gameDrawsUsed = Number.isFinite(saved) ? Math.max(0, Math.min(MAX_GAME_DRAWS, Math.floor(saved))) : 0;
+  } catch (error) {
+    gameDrawsUsed = 0;
+  }
+  updateDrawControls();
+}
+function updateDrawControls() {
+  const remaining = Math.max(0, MAX_GAME_DRAWS - gameDrawsUsed);
+  const display = document.getElementById("remaining-draws");
+  const quantity = document.getElementById("quantity");
+  if (display) display.textContent = "このゲームで引ける残りユニット数：" + remaining + "体";
+  if (quantity) {
+    quantity.max = String(Math.max(1, Math.min(MAX_GAME_DRAWS, remaining)));
+    if (Number(quantity.value) > remaining && remaining > 0) {
+      quantity.value = String(remaining);
+      document.getElementById("quantity-value").textContent = quantity.value;
+    }
+    quantity.disabled = remaining === 0;
+  }
+  document.querySelectorAll(".draw-button").forEach(button => {
+    button.disabled = remaining === 0;
+  });
+  if (remaining === 0 && display) display.textContent = "このゲームのガチャは終了しました。新しいゲームを始めてください。";
+}
+function startNewGame() {
+  if (!confirm("新しいゲームを始めますか？ ガチャの残り回数が15体に戻ります。")) return;
+  gameDrawsUsed = 0;
+  try { localStorage.setItem(GAME_DRAWS_KEY, "0"); } catch (error) {}
+  document.getElementById("quantity").value = "1";
+  document.getElementById("quantity-value").textContent = "1";
+  document.getElementById("message").textContent = "新しいゲームを始めました！レベルを選んでガチャを回してください。";
+  updateDrawControls();
+}
 
 function shuffle(items) {
   const copy = [...items];
@@ -626,6 +669,17 @@ async function draw(level) {
   const message = document.getElementById("message");
   const results = document.getElementById("results");
   const count = Number(document.getElementById("quantity").value);
+  const remaining = MAX_GAME_DRAWS - gameDrawsUsed;
+  if (remaining <= 0) {
+    message.textContent = "このゲームで引ける回数は終了しました。「新しいゲームを始める」を押してください。";
+    updateDrawControls();
+    return;
+  }
+  if (count > remaining) {
+    message.textContent = "残りは " + remaining + "体です。引く数を調整してください。";
+    updateDrawControls();
+    return;
+  }
   buttons.forEach(button => button.disabled = true);
   results.replaceChildren();
   message.textContent = "カプセルを準備しています…";
@@ -655,13 +709,16 @@ async function draw(level) {
     document.getElementById("png-status").textContent = "";
     document.getElementById("png-download").hidden = true;
     saveDrawHistory(selected, level);
-    message.textContent = "LEVEL " + level + " のカプセルが " + selected.length + " 個出ました！";
+    gameDrawsUsed = Math.min(MAX_GAME_DRAWS, gameDrawsUsed + selected.length);
+    try { localStorage.setItem(GAME_DRAWS_KEY, String(gameDrawsUsed)); } catch (error) {}
+    updateDrawControls();
+    message.textContent = "LEVEL " + level + " のカプセルが " + selected.length + " 個出ました！ 残り " + (MAX_GAME_DRAWS - gameDrawsUsed) + "体です。"
   } catch (error) {
     console.error("D.D Supabase error:", error);
     const detail = error && error.message ? error.message : String(error);
     message.textContent = "読み込みエラー：" + detail;
   } finally {
-    buttons.forEach(button => button.disabled = false);
+    updateDrawControls();
   }
 }
 
