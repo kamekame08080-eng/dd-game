@@ -212,6 +212,7 @@ function toggleGameSupport() {
   support.hidden = !opening;
   main.hidden = opening;
   document.getElementById("support-open").textContent = opening ? "ガチャページに戻る" : "ゲームサポートを開く";
+  try { localStorage.setItem("dd_game_support_view_v1", opening ? "support" : "gacha"); } catch (error) {}
   if (opening) renderLives();
 }
 function renderLives() {
@@ -313,6 +314,10 @@ function loadGameSupportState() {
     }
     renderLives();
     renderCrests();
+    const showSupport = localStorage.getItem("dd_game_support_view_v1") === "support";
+    document.getElementById("game-support").hidden = !showSupport;
+    document.getElementById("main-page").hidden = showSupport;
+    document.getElementById("support-open").textContent = showSupport ? "ガチャページに戻る" : "ゲームサポートを開く";
     const status = document.getElementById("support-save-status");
     if (status) status.textContent = "✓ 保存済みのライフとクレストを読み込みました。";
   } catch (error) {
