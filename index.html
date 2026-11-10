@@ -70,6 +70,7 @@ button:disabled { opacity:.55; cursor:wait; }
 .dice-stage-card.yellow strong { color:#f5d36b; }
 .dice-stage-card.metal strong { color:#e8edf5; }
 .dice-stage.has-metal { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.dice-assignments.has-metal { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .dice-stage-card.metal { background:linear-gradient(145deg,#454d5c,#171b2b 65%); border-color:#c7d0df; }
 .dice-cube.metal { --die-color:#aeb8c7; }
 .dice-cube.metal .dice-face { background:linear-gradient(145deg,#f3f6fb 0%,#aeb8c7 38%,#687386 72%,#dfe5ed 100%); color:#202633; text-shadow:0 1px 1px #fff9; border-color:#f5f7fb; box-shadow:inset -8px -8px 12px #26304455,inset 5px 5px 9px #ffffffb0,0 2px 5px #0006; }
@@ -215,6 +216,7 @@ button:disabled { opacity:.55; cursor:wait; }
         <label for="dice-unit-yellow" style="color:#f5d36b">● 黄色</label>
         <select id="dice-unit-yellow" onchange="saveDiceAssignment('yellow')"><option value="">履歴から選択</option></select>
         <label class="dice-special"><input id="dice-special-yellow" type="checkbox" onchange="saveDiceAssignment('yellow')">特別ユニット</label>
+      </div>
       <div class="dice-assignment" id="dice-assignment-metal" hidden>
         <label for="dice-unit-metal" style="color:#e8edf5">◆ メタリック</label>
         <select id="dice-unit-metal" onchange="saveDiceAssignment('metal')"><option value="">LEVEL 4から選択</option></select>
@@ -508,8 +510,12 @@ async function renderDiceAssignments() {
     const wanted = saved[color] && saved[color].history_id ? saved[color].history_id : "";
     select.value = options.some(entry => entry.history_id === wanted) ? wanted : "";
     diceAssignments[color] = select.value;
-    checkbox.checked = !!(saved[color] && saved[color].special);
-    diceSpecialUnits[color] = checkbox.checked;
+    if (checkbox) {
+      checkbox.checked = !!(saved[color] && saved[color].special);
+      diceSpecialUnits[color] = checkbox.checked;
+    } else {
+      diceSpecialUnits[color] = false;
+    }
     updateDiceUnitLabel(color, available);
   });
   try { metalDiceEnabled = localStorage.getItem("dd_metal_dice_enabled_v1") === "true"; } catch (error) {}
@@ -525,7 +531,8 @@ function updateDiceUnitLabel(color, history) {
 }
 function saveDiceAssignment(color) {
   diceAssignments[color] = document.getElementById("dice-unit-" + color).value;
-  diceSpecialUnits[color] = document.getElementById("dice-special-" + color).checked;
+  const checkbox = document.getElementById("dice-special-" + color);
+  diceSpecialUnits[color] = checkbox ? checkbox.checked : false;
   try {
     const saved = {};
     allDiceColors.forEach(key => saved[key] = {history_id:diceAssignments[key],special:diceSpecialUnits[key]});
@@ -539,6 +546,7 @@ function saveDiceAssignment(color) {
 function activeDiceColors() { return metalDiceEnabled ? allDiceColors : diceColors; }
 function applyMetalDiceVisibility() {
   document.getElementById("dice-assignment-metal").hidden = !metalDiceEnabled;
+  document.querySelector(".dice-assignments").classList.toggle("has-metal",metalDiceEnabled);
   document.getElementById("dice-card-metal").hidden = !metalDiceEnabled;
   document.getElementById("dice-stage").classList.toggle("has-metal",metalDiceEnabled);
   document.getElementById("dice-add-metal").textContent = metalDiceEnabled ? "－ メタリックダイスをしまう" : "＋ メタリックダイスを追加";
