@@ -136,6 +136,7 @@ button:disabled { opacity:.55; cursor:wait; }
 <section id="game-support" hidden>
   <h2>ゲームサポート</h2>
   <p class="small">プレイヤーごとの重要ユニットのライフを管理します。</p>
+  <p id="support-save-status" class="small" aria-live="polite">この端末に自動保存します。</p>
   <div class="support-players">
     <div class="support-player">
       <h3>プレイヤー A</h3>
@@ -229,18 +230,21 @@ function changeLife(player, amount) {
   }
   playerLives[player] = next;
   renderLives();
+  saveGameSupportState();
   document.getElementById("support-status").textContent =
     "プレイヤー " + player.toUpperCase() + " のライフ：" + next;
 }
 function resetLife(player) {
   playerLives[player] = 3;
   renderLives();
+  saveGameSupportState();
   document.getElementById("support-status").textContent = "プレイヤー " + player.toUpperCase() + " のライフを3に戻しました。";
 }
 function resetAllLife() {
   playerLives.a = 3;
   playerLives.b = 3;
   renderLives();
+  saveGameSupportState();
   document.getElementById("support-status").textContent = "両プレイヤーのライフを3に戻しました。";
 }
 const crestTypes = ["move", "attack", "defense", "summon", "magic"];
@@ -262,19 +266,62 @@ function changeCrest(player, type, amount) {
   }
   playerCrests[player][type] = next;
   renderCrests();
+  saveGameSupportState();
   document.getElementById("crest-status").textContent =
     "プレイヤー " + player.toUpperCase() + " の" + crestNames[type] + "クレスト：" + next;
 }
 function resetCrests(player) {
   crestTypes.forEach(type => playerCrests[player][type] = 0);
   renderCrests();
+  saveGameSupportState();
   document.getElementById("crest-status").textContent = "プレイヤー " + player.toUpperCase() + " のクレストを0に戻しました。";
 }
 function resetAllCrests() {
   ["a","b"].forEach(player => crestTypes.forEach(type => playerCrests[player][type] = 0));
   renderCrests();
+  saveGameSupportState();
   document.getElementById("crest-status").textContent = "両プレイヤーのクレストを0に戻しました。";
 }
+function saveGameSupportState() {
+  try {
+    localStorage.setItem("dd_game_support_v1", JSON.stringify({
+      lives: playerLives,
+      crests: playerCrests
+    }));
+    const status = document.getElementById("support-save-status");
+    if (status) status.textContent = "✓ ライフとクレストをこの端末に自動保存しました。";
+  } catch (error) {
+    console.error("D.D game support save error:", error);
+    const status = document.getElementById("support-save-status");
+    if (status) status.textContent = "自動保存できませんでした。ブラウザの設定をご確認ください。";
+  }
+}
+function loadGameSupportState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("dd_game_support_v1") || "null");
+    if (saved && saved.lives) {
+      ["a","b"].forEach(player => {
+        const value = Number(saved.lives[player]);
+        if (Number.isFinite(value)) playerLives[player] = Math.max(0, Math.min(3, Math.floor(value)));
+      });
+    }
+    if (saved && saved.crests) {
+      ["a","b"].forEach(player => crestTypes.forEach(type => {
+        const value = Number(saved.crests[player] && saved.crests[player][type]);
+        if (Number.isFinite(value)) playerCrests[player][type] = Math.max(0, Math.floor(value));
+      }));
+    }
+    renderLives();
+    renderCrests();
+    const status = document.getElementById("support-save-status");
+    if (status) status.textContent = "✓ 保存済みのライフとクレストを読み込みました。";
+  } catch (error) {
+    console.error("D.D game support load error:", error);
+    const status = document.getElementById("support-save-status");
+    if (status) status.textContent = "保存データを読み込めませんでした。";
+  }
+}
+loadGameSupportState();
 let lastDrawResult = null;
 let lastPngUrl = null;
 
