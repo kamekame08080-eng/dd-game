@@ -51,6 +51,57 @@ button:disabled { opacity:.55; cursor:wait; }
 .crest-count { font-size:18px; font-weight:bold; min-width:24px; display:inline-block; }
 .crest-control { padding:7px 12px; margin:2px; font-size:15px; min-width:38px; }
 .crest-reset { padding:9px 16px; font-size:14px; }
+
+/* D.D Dice */
+.dice-area { margin:22px 0; padding:16px 10px; background:#20263a; border:1px solid #59617d; border-radius:16px; }
+.dice-area h3 { margin:0 0 8px; color:#f5d36b; }
+.dice-help { color:#c5c9d8; font-size:12px; line-height:1.6; }
+.dice-assignments { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:14px 0; }
+.dice-assignment { min-width:0; padding:9px 5px; border-radius:12px; background:#292f46; border:1px solid #59617d; }
+.dice-assignment label { display:block; margin-bottom:7px; font-weight:bold; }
+.dice-assignment select { width:100%; min-width:0; padding:8px 3px; border-radius:7px; border:1px solid #707b9a; background:#171b2b; color:#fff; font-size:12px; }
+.dice-special { display:flex !important; align-items:center; justify-content:center; gap:4px; margin-top:8px; font-size:10px; line-height:1.3; font-weight:normal !important; }
+.dice-special input { width:auto; margin:0; }
+.dice-stage { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:20px 0 14px; perspective:800px; }
+.dice-stage-card { min-width:0; padding:12px 2px 8px; border-radius:12px; background:#171b2b; border:1px solid #59617d; overflow:hidden; }
+.dice-stage-card strong { display:block; margin-bottom:12px; }
+.dice-stage-card.red strong { color:#ff7777; }
+.dice-stage-card.blue strong { color:#75b5ff; }
+.dice-stage-card.yellow strong { color:#f5d36b; }
+.dice-perspective { width:82px; height:82px; margin:0 auto 12px; perspective:500px; }
+.dice-cube { --die-color:#d94b4b; position:relative; width:76px; height:76px; margin:3px; transform-style:preserve-3d; transform:rotateX(0deg) rotateY(0deg); transition:transform .55s cubic-bezier(.2,.8,.2,1); }
+.dice-cube.rolling { animation:dice-tumble 1.65s cubic-bezier(.18,.72,.25,1) both; }
+.dice-face { position:absolute; display:flex; align-items:center; justify-content:center; width:76px; height:76px; left:0; top:0; border:2px solid #ffffffcc; border-radius:9px; background:var(--die-color); color:#fff; font-size:22px; font-weight:900; text-shadow:0 2px 3px #0008; box-shadow:inset -8px -8px 12px #0003,inset 5px 5px 9px #ffffff30; backface-visibility:hidden; }
+.dice-face.front { transform:translateZ(38px); }
+.dice-face.back { transform:rotateY(180deg) translateZ(38px); }
+.dice-face.right { transform:rotateY(90deg) translateZ(38px); }
+.dice-face.left { transform:rotateY(-90deg) translateZ(38px); }
+.dice-face.top { transform:rotateX(90deg) translateZ(38px); }
+.dice-face.bottom { transform:rotateX(-90deg) translateZ(38px); }
+.dice-face.star { font-size:29px; }
+.dice-result-label { min-height:24px; color:#f5d36b; font-weight:bold; font-size:17px; }
+.dice-unit-label { min-height:30px; padding:0 3px; color:#c5c9d8; font-size:10px; line-height:1.4; overflow-wrap:anywhere; }
+.dice-outcomes { display:grid; gap:8px; margin-top:14px; text-align:left; }
+.dice-outcome { padding:10px 12px; border-radius:9px; background:#292f46; border-left:4px solid #7d879f; font-size:14px; line-height:1.6; }
+.dice-outcome.success { border-left-color:#35bd75; }
+.dice-outcome.failure { border-left-color:#ff6b78; }
+#dice-roll { width:100%; margin-top:10px; background:#f5d36b; }
+#dice-status { min-height:22px; color:#f5d36b; font-size:13px; }
+@keyframes dice-tumble {
+  0% { transform:translateY(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+  18% { transform:translateY(-42px) rotateX(230deg) rotateY(170deg) rotateZ(95deg); }
+  42% { transform:translateY(-16px) rotateX(510deg) rotateY(390deg) rotateZ(175deg); }
+  62% { transform:translateY(-25px) rotateX(760deg) rotateY(590deg) rotateZ(250deg); }
+  82% { transform:translateY(4px) rotateX(980deg) rotateY(780deg) rotateZ(330deg); }
+  92% { transform:translateY(-9px) rotateX(1080deg) rotateY(900deg) rotateZ(370deg); }
+  100% { transform:translateY(0) rotateX(1260deg) rotateY(1080deg) rotateZ(450deg); }
+}
+@media(max-width:380px) {
+  .dice-assignment select { font-size:10px; }
+  .dice-perspective { transform:scale(.88); transform-origin:center top; margin-bottom:3px; }
+  .dice-stage-card { padding-left:0; padding-right:0; }
+}
+
 @media(max-width:380px) { .support-players { gap:7px; } .support-player { padding:14px 5px; } .life-button { font-size:24px; } }
 
 #admin-area { max-width:640px; margin:28px auto; padding:18px; background:#222940; border:1px solid #59617d; border-radius:14px; text-align:left; }
@@ -136,6 +187,58 @@ button:disabled { opacity:.55; cursor:wait; }
 <section id="game-support" hidden>
   <h2>ゲームサポート</h2>
   <p class="small">プレイヤーごとの重要ユニットのライフを管理します。</p>
+
+  <div class="dice-area">
+    <h3>🎲 召喚サイコロ</h3>
+    <p class="dice-help">抽選履歴からユニットを選び、赤・青・黄色のサイコロに割り当てます。同じユニットを複数の色に割り当てることもできます。</p>
+    <div class="dice-assignments">
+      <div class="dice-assignment">
+        <label for="dice-unit-red" style="color:#ff7777">● 赤</label>
+        <select id="dice-unit-red" onchange="saveDiceAssignment('red')"><option value="">履歴から選択</option></select>
+        <label class="dice-special"><input id="dice-special-red" type="checkbox" onchange="saveDiceAssignment('red')">特別ユニット</label>
+      </div>
+      <div class="dice-assignment">
+        <label for="dice-unit-blue" style="color:#75b5ff">● 青</label>
+        <select id="dice-unit-blue" onchange="saveDiceAssignment('blue')"><option value="">履歴から選択</option></select>
+        <label class="dice-special"><input id="dice-special-blue" type="checkbox" onchange="saveDiceAssignment('blue')">特別ユニット</label>
+      </div>
+      <div class="dice-assignment">
+        <label for="dice-unit-yellow" style="color:#f5d36b">● 黄色</label>
+        <select id="dice-unit-yellow" onchange="saveDiceAssignment('yellow')"><option value="">履歴から選択</option></select>
+        <label class="dice-special"><input id="dice-special-yellow" type="checkbox" onchange="saveDiceAssignment('yellow')">特別ユニット</label>
+      </div>
+    </div>
+    <div class="dice-stage">
+      <div class="dice-stage-card red">
+        <strong>赤サイコロ</strong>
+        <div class="dice-perspective"><div class="dice-cube" id="dice-cube-red" style="--die-color:#c93643">
+          <div class="dice-face front">1/2</div><div class="dice-face back">1</div><div class="dice-face right">1/2</div><div class="dice-face left">1/2</div><div class="dice-face top star">⭐</div><div class="dice-face bottom">3</div>
+        </div></div>
+        <div class="dice-result-label" id="dice-result-red">—</div>
+        <div class="dice-unit-label" id="dice-label-red">ユニット未選択</div>
+      </div>
+      <div class="dice-stage-card blue">
+        <strong>青サイコロ</strong>
+        <div class="dice-perspective"><div class="dice-cube" id="dice-cube-blue" style="--die-color:#286fc4">
+          <div class="dice-face front">1/2</div><div class="dice-face back">1</div><div class="dice-face right">1/2</div><div class="dice-face left">1/2</div><div class="dice-face top star">⭐</div><div class="dice-face bottom">3</div>
+        </div></div>
+        <div class="dice-result-label" id="dice-result-blue">—</div>
+        <div class="dice-unit-label" id="dice-label-blue">ユニット未選択</div>
+      </div>
+      <div class="dice-stage-card yellow">
+        <strong>黄色サイコロ</strong>
+        <div class="dice-perspective"><div class="dice-cube" id="dice-cube-yellow" style="--die-color:#d59a20">
+          <div class="dice-face front">1/2</div><div class="dice-face back">1</div><div class="dice-face right">1/2</div><div class="dice-face left">1/2</div><div class="dice-face top star">⭐</div><div class="dice-face bottom">3</div>
+        </div></div>
+        <div class="dice-result-label" id="dice-result-yellow">—</div>
+        <div class="dice-unit-label" id="dice-label-yellow">ユニット未選択</div>
+      </div>
+    </div>
+    <button id="dice-roll" type="button" onclick="rollSummonDice()" disabled>3個同時にサイコロを振る！</button>
+    <p id="dice-status" aria-live="polite">抽選履歴から3個のユニットを選んでください。</p>
+    <div id="dice-outcomes" class="dice-outcomes" aria-live="polite"></div>
+  </div>
+
   <p id="support-save-status" class="small" aria-live="polite">この端末に自動保存します。</p>
   <div class="support-players">
     <div class="support-player">
@@ -326,6 +429,158 @@ function loadGameSupportState() {
     if (status) status.textContent = "保存データを読み込めませんでした。";
   }
 }
+
+const diceColors = ["red","blue","yellow"];
+const diceColorNames = {red:"赤",blue:"青",yellow:"黄色"};
+const diceFaceLabels = ["⭐","1/2","1/2","1/2","1","3"];
+const diceAssignments = {red:"",blue:"",yellow:""};
+const diceSpecialUnits = {red:false,blue:false,yellow:false};
+let diceIsRolling = false;
+
+function readDiceHistory() {
+  try {
+    const history = JSON.parse(localStorage.getItem("dd_draw_history_v1") || "[]");
+    let changed = false;
+    history.forEach((entry,index) => {
+      if (!entry.history_id) {
+        entry.history_id = "legacy-" + Date.now() + "-" + index + "-" + Math.random().toString(36).slice(2,7);
+        changed = true;
+      }
+    });
+    if (changed) localStorage.setItem("dd_draw_history_v1", JSON.stringify(history));
+    return history;
+  } catch (error) {
+    console.error("D.D dice history read error:", error);
+    return [];
+  }
+}
+function renderDiceAssignments() {
+  const history = readDiceHistory();
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("dd_dice_assignments_v1") || "{}") || {}; } catch (error) {}
+  diceColors.forEach(color => {
+    const select = document.getElementById("dice-unit-" + color);
+    const checkbox = document.getElementById("dice-special-" + color);
+    select.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = history.length ? "ユニットを選択" : "抽選履歴なし";
+    select.appendChild(placeholder);
+    history.forEach(entry => {
+      const option = document.createElement("option");
+      option.value = entry.history_id;
+      const date = entry.drawn_at ? new Date(entry.drawn_at).toLocaleDateString("ja-JP") : "";
+      option.textContent = "LV" + entry.level + "｜" + (entry.name || "名前未設定") + (date ? "（" + date + "）" : "");
+      select.appendChild(option);
+    });
+    const wanted = saved[color] && saved[color].history_id ? saved[color].history_id : "";
+    select.value = history.some(entry => entry.history_id === wanted) ? wanted : "";
+    diceAssignments[color] = select.value;
+    checkbox.checked = !!(saved[color] && saved[color].special);
+    diceSpecialUnits[color] = checkbox.checked;
+    updateDiceUnitLabel(color, history);
+  });
+  updateDiceRollButton();
+}
+function updateDiceUnitLabel(color, history) {
+  const entries = history || readDiceHistory();
+  const unit = entries.find(entry => entry.history_id === diceAssignments[color]);
+  document.getElementById("dice-label-" + color).textContent = unit
+    ? "LEVEL " + unit.level + "｜" + (unit.name || "名前未設定") + (diceSpecialUnits[color] ? "｜特別" : "")
+    : "ユニット未選択";
+}
+function saveDiceAssignment(color) {
+  diceAssignments[color] = document.getElementById("dice-unit-" + color).value;
+  diceSpecialUnits[color] = document.getElementById("dice-special-" + color).checked;
+  try {
+    const saved = {};
+    diceColors.forEach(key => saved[key] = {history_id:diceAssignments[key],special:diceSpecialUnits[key]});
+    localStorage.setItem("dd_dice_assignments_v1", JSON.stringify(saved));
+  } catch (error) {
+    document.getElementById("dice-status").textContent = "割り当てを保存できませんでした。";
+  }
+  updateDiceUnitLabel(color);
+  updateDiceRollButton();
+}
+function updateDiceRollButton() {
+  const button = document.getElementById("dice-roll");
+  if (button) button.disabled = diceIsRolling || !diceColors.every(color => !!diceAssignments[color]);
+}
+function getDiceFinalRotation(face) {
+  const rotations = [
+    [90,0],   // star: top
+    [0,0],    // 1/2: front
+    [0,-90],  // 1/2: right
+    [0,90],   // 1/2: left
+    [0,180],  // 1: back
+    [-90,0]   // 3: bottom
+  ];
+  return rotations[face];
+}
+function isSummonSuccess(level, face, special) {
+  if (special) return face === 0;
+  if (Number(level) === 1) return [1,2,3,4].includes(face);
+  if (Number(level) === 2) return [1,2,3].includes(face);
+  if (Number(level) === 3) return [0,5].includes(face);
+  return false;
+}
+function showDiceOutcomes(results) {
+  const area = document.getElementById("dice-outcomes");
+  area.replaceChildren();
+  results.forEach(result => {
+    const row = document.createElement("div");
+    row.className = "dice-outcome " + (result.success ? "success" : "failure");
+    const title = document.createElement("strong");
+    title.textContent = diceColorNames[result.color] + "｜" + result.unit.name + "（LEVEL " + result.unit.level + "）";
+    const detail = document.createElement("div");
+    detail.textContent = "出た目：" + diceFaceLabels[result.face] + "　→　召喚" + (result.success ? "成功！" : "失敗");
+    row.append(title, detail);
+    area.appendChild(row);
+  });
+}
+async function rollSummonDice() {
+  if (diceIsRolling) return;
+  const history = readDiceHistory();
+  const selected = diceColors.map(color => ({
+    color,
+    unit: history.find(entry => entry.history_id === diceAssignments[color]),
+    special: diceSpecialUnits[color]
+  }));
+  if (selected.some(item => !item.unit)) {
+    document.getElementById("dice-status").textContent = "赤・青・黄色すべてにユニットを割り当ててください。";
+    return;
+  }
+  diceIsRolling = true;
+  updateDiceRollButton();
+  document.getElementById("dice-status").textContent = "サイコロが転がっています……！";
+  document.getElementById("dice-outcomes").replaceChildren();
+  const results = selected.map(item => ({...item,face:Math.floor(Math.random()*6)}));
+  const animations = results.map((result,index) => new Promise(resolve => {
+    const cube = document.getElementById("dice-cube-" + result.color);
+    document.getElementById("dice-result-" + result.color).textContent = "……";
+    cube.classList.remove("rolling");
+    cube.style.transform = "";
+    void cube.offsetWidth;
+    cube.classList.add("rolling");
+    const [x,y] = getDiceFinalRotation(result.face);
+    const extraX = 360 * (3 + Math.floor(Math.random()*2));
+    const extraY = 360 * (2 + Math.floor(Math.random()*3));
+    setTimeout(() => {
+      cube.classList.remove("rolling");
+      cube.style.transform = "rotateX(" + (x+extraX) + "deg) rotateY(" + (y+extraY) + "deg)";
+      document.getElementById("dice-result-" + result.color).textContent = diceFaceLabels[result.face];
+      resolve();
+    }, 1650 + index*90);
+  }));
+  await Promise.all(animations);
+  results.forEach(result => result.success = isSummonSuccess(result.unit.level,result.face,result.special));
+  showDiceOutcomes(results);
+  document.getElementById("dice-status").textContent = "3個のサイコロの結果が出ました！";
+  diceIsRolling = false;
+  updateDiceRollButton();
+}
+
+renderDiceAssignments();
 loadGameSupportState();
 let lastDrawResult = null;
 let lastPngUrl = null;
@@ -536,6 +791,7 @@ function saveDrawHistory(units, level) {
     const drawnAt = new Date().toISOString();
     units.forEach(unit => {
       history.unshift({
+        history_id: "draw-" + Date.now() + "-" + Math.random().toString(36).slice(2,8),
         drawn_at: drawnAt,
         level: level,
         name: unit.name || "名前未設定",
