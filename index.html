@@ -176,6 +176,15 @@ button:disabled { opacity:.55; cursor:wait; }
     <select id="unit-level"><option value="1">LEVEL 1</option><option value="2">LEVEL 2</option><option value="3">LEVEL 3</option><option value="4">LEVEL 4（特別）</option></select>
     <label for="unit-description">説明</label>
     <textarea id="unit-description" placeholder="ユニットの説明"></textarea>
+    <h3>召喚失敗時のクレスト報酬</h3>
+    <p class="small">このユニットの召喚に失敗したとき、割り当てたプレイヤーが獲得する数を入力します。不要な種類は0のままで大丈夫です。</p>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 16px;">
+      <label>移動 <input id="unit-crest-move" type="number" min="0" step="1" value="0"></label>
+      <label>攻撃 <input id="unit-crest-attack" type="number" min="0" step="1" value="0"></label>
+      <label>防御 <input id="unit-crest-defense" type="number" min="0" step="1" value="0"></label>
+      <label>召喚 <input id="unit-crest-summon" type="number" min="0" step="1" value="0"></label>
+      <label>魔法 <input id="unit-crest-magic" type="number" min="0" step="1" value="0"></label>
+    </div>
     <label for="unit-file">画像を選択（iPhoneの写真から選べます）</label>
     <input id="unit-file" type="file" accept="image/*">
     <button type="button" onclick="uploadUnitImage()">選んだ画像をアップロード</button>
@@ -521,7 +530,7 @@ function readDiceHistory() {
 async function renderDiceAssignments() {
   const history = readDiceHistory();
   try {
-    const {data,error} = await db.from("units").select("id,name,level,image_url,description").eq("level",4).order("name");
+    const {data,error} = await db.from("units").select("id,name,level,image_url,description,crest_move,crest_attack,crest_defense,crest_summon,crest_magic").eq("level",4).order("name");
     if (error) throw error;
     level4Units = (data || []).map(unit => ({...unit,history_id:"level4-" + unit.id}));
   } catch (error) { console.error("D.D LEVEL 4 units load error:",error); level4Units = []; }
@@ -637,6 +646,13 @@ function showDiceOutcomes(results) {
     const detail = document.createElement("div");
     detail.textContent = "出た目：" + diceFaceLabels[result.face] + "　→　召喚" + (result.success ? "成功！" : "失敗");
     row.append(title, detail);
+    if (!result.success) {
+      const earned = crestTypes.filter(type => Number(result.unit["crest_" + type]) > 0).map(type => crestNames[type] + " +" + Number(result.unit["crest_" + type]));
+      const reward = document.createElement("div");
+      reward.textContent = earned.length ? "PLAYER " + (activeDicePlayer === "a" ? "1" : "2") + " 獲得：" + earned.join("・") : "失敗時クレスト報酬なし";
+      reward.style.color = earned.length ? "#f5d36b" : "#aeb6ce";
+      row.appendChild(reward);
+    }
     area.appendChild(row);
   });
 }
@@ -691,10 +707,20 @@ async function rollSummonDice() {
       result.success = normalSummonAllowed && isSummonSuccess(result.unit.level,result.face,result.special);
     }
   });
+  const totalEarned = {move:0,attack:0,defense:0,summon:0,magic:0};
+  results.filter(result => !result.success).forEach(result => {
+    crestTypes.forEach(type => {
+      const amount = Math.max(0,Math.floor(Number(result.unit["crest_" + type]) || 0));
+      if (amount > 0) { playerCrests[activeDicePlayer][type] += amount; totalEarned[type] += amount; }
+    });
+  });
+  if (crestTypes.some(type => totalEarned[type] > 0)) { renderCrests(); saveGameSupportState(); }
   showDiceOutcomes(results);
+  const earnedSummary = crestTypes.filter(type => totalEarned[type] > 0).map(type => crestNames[type] + " +" + totalEarned[type]);
+  const rewardStatus = earnedSummary.length ? " PLAYER " + (activeDicePlayer === "a" ? "1" : "2") + " の獲得クレスト：" + earnedSummary.join("・") : " 失敗時クレスト報酬はありません。";
   const normalStatus = normalSummonAllowed ? "通常ユニットは2個以上成功条件を満たしました。" : "通常ユニットは2個以上成功条件を満たしていないため召喚失敗です。";
   const level4Status = results.some(result => Number(result.unit.level) === 4) ? (results.some(item => item.face === 0) ? " LEVEL 4は⭐が出たため召喚成功です。" : " LEVEL 4は⭐が出なかったため召喚失敗です。") : "";
-  document.getElementById("dice-status").textContent = normalStatus + level4Status;
+  document.getElementById("dice-status").textContent = normalStatus + level4Status + rewardStatus;
   diceIsRolling = false;
   updateDiceRollButton();
 }
@@ -804,7 +830,7 @@ async function draw(level) {
   try {
     const request = db
       .from("units")
-      .select("id,name,level,image_url,description")
+      .select("id,name,level,image_url,description,crest_move,crest_attack,crest_defense,crest_summon,crest_magic")
       .eq("level", level);
     const timeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("データベースからの応答がありません。時間をおいて再度お試しください。")), 12000)
@@ -971,7 +997,12 @@ function saveDrawHistory(units, level) {
         level: level,
         name: unit.name || "名前未設定",
         image_url: unit.image_url || "",
-        description: unit.description || ""
+        description: unit.description || "",
+        crest_move: Number(unit.crest_move) || 0,
+        crest_attack: Number(unit.crest_attack) || 0,
+        crest_defense: Number(unit.crest_defense) || 0,
+        crest_summon: Number(unit.crest_summon) || 0,
+        crest_magic: Number(unit.crest_magic) || 0
       });
     });
     localStorage.setItem(key, JSON.stringify(history.slice(0, 200)));
@@ -1090,6 +1121,7 @@ function resetUnitForm() {
   document.getElementById("unit-name").value = "";
   document.getElementById("unit-level").value = "1";
   document.getElementById("unit-description").value = "";
+  ["move","attack","defense","summon","magic"].forEach(type => document.getElementById("unit-crest-" + type).value = "0");
   document.getElementById("unit-image").value = "";
 }
 
@@ -1136,7 +1168,14 @@ async function saveUnit() {
   if (!name) { status.textContent = "ユニット名を入力してください。"; return; }
   status.textContent = "保存しています…";
   try {
-    const values = { name, level, description, image_url };
+    const values = {
+      name, level, description, image_url,
+      crest_move: Math.max(0,Math.floor(Number(document.getElementById("unit-crest-move").value) || 0)),
+      crest_attack: Math.max(0,Math.floor(Number(document.getElementById("unit-crest-attack").value) || 0)),
+      crest_defense: Math.max(0,Math.floor(Number(document.getElementById("unit-crest-defense").value) || 0)),
+      crest_summon: Math.max(0,Math.floor(Number(document.getElementById("unit-crest-summon").value) || 0)),
+      crest_magic: Math.max(0,Math.floor(Number(document.getElementById("unit-crest-magic").value) || 0))
+    };
     const result = id
       ? await db.from("units").update(values).eq("id", id)
       : await db.from("units").insert(values);
@@ -1152,7 +1191,7 @@ async function saveUnit() {
 async function loadAdminUnits() {
   const list = document.getElementById("admin-unit-list");
   list.textContent = "読み込み中…";
-  const { data, error } = await db.from("units").select("id,name,level,description,image_url").order("level").order("name");
+  const { data, error } = await db.from("units").select("id,name,level,description,image_url,crest_move,crest_attack,crest_defense,crest_summon,crest_magic").order("level").order("name");
   if (error) { list.textContent = "読み込みエラー：" + error.message; return; }
   list.replaceChildren();
   if (!data.length) { list.textContent = "登録済みユニットはありません。"; return; }
@@ -1165,6 +1204,11 @@ async function loadAdminUnits() {
     const desc = document.createElement("p");
     desc.textContent = unit.description || "説明なし";
     item.appendChild(desc);
+    const reward = document.createElement("p");
+    reward.className = "small";
+    reward.textContent = "失敗時報酬：" + crestTypes.filter(type => Number(unit["crest_" + type]) > 0).map(type => crestNames[type] + " " + unit["crest_" + type]).join("・");
+    if (!crestTypes.some(type => Number(unit["crest_" + type]) > 0)) reward.textContent += "なし";
+    item.appendChild(reward);
     const edit = document.createElement("button");
     edit.type = "button"; edit.textContent = "編集";
     edit.onclick = () => {
@@ -1172,6 +1216,7 @@ async function loadAdminUnits() {
       document.getElementById("unit-name").value = unit.name || "";
       document.getElementById("unit-level").value = String(unit.level);
       document.getElementById("unit-description").value = unit.description || "";
+      ["move","attack","defense","summon","magic"].forEach(type => document.getElementById("unit-crest-" + type).value = Number(unit["crest_" + type]) || 0);
       document.getElementById("unit-image").value = unit.image_url || "";
       document.getElementById("admin-status").textContent = "編集内容を入力欄に読み込みました。";
       document.getElementById("unit-name").scrollIntoView({behavior:"smooth",block:"center"});
