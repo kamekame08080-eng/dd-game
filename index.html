@@ -565,12 +565,12 @@ function updateDiceRollButton() {
 }
 function getDiceFinalRotation(face) {
   const rotations = [
-    [90,0],   // star: top
+    [-90,0],  // star: top
     [0,0],    // 1/2: front
     [0,-90],  // 1/2: right
     [0,90],   // 1/2: left
     [0,180],  // 1: back
-    [-90,0]   // 3: bottom
+    [90,0]    // 3: bottom
   ];
   return rotations[face];
 }
