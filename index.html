@@ -22,6 +22,8 @@ button:disabled { opacity:.55; cursor:wait; }
 #quantity-value { color:#f5d36b; font-weight:bold; }
 #message { min-height:60px; color:#dce1f2; }
 #results { max-width:640px; margin:20px auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+#png-area { max-width:640px; margin:18px auto; padding:16px; background:#292f46; border-radius:14px; }
+#png-download { display:inline-block; margin-top:10px; padding:12px 18px; border-radius:20px; background:#35bd75; color:#102016; font-weight:bold; text-decoration:none; }
 #history-area { max-width:640px; margin:20px auto; padding:16px; background:#292f46; border-radius:14px; }
 #history-list { margin-top:14px; text-align:left; }
 .history-entry { padding:12px; margin:10px 0; border:1px solid #59617d; border-radius:10px; }
@@ -69,6 +71,7 @@ button:disabled { opacity:.55; cursor:wait; }
 </div>
 <div id="message">レベルを選んでガチャを回してください！</div>
 <div id="results" aria-live="polite"></div>
+<div id="png-area" hidden><button type="button" onclick="makeResultPng()">抽選結果をカード画像で保存</button><p id="png-status" class="small"></p><a id="png-download" hidden target="_blank" rel="noopener">PNG画像を開く・保存する</a></div>
 <div id="history-area"><button type="button" onclick="toggleHistory()">抽選履歴を見る</button><div id="history-list" hidden></div></div>
 <p class="small">ユニットの情報はオンラインデータベースから読み込みます。</p>
 
@@ -113,6 +116,8 @@ button:disabled { opacity:.55; cursor:wait; }
 const SUPABASE_URL = "https://ddmiwtrdsrevqajbjrgx.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YTD-Q9dckugZjxvEG3I1DA_dy14gKPg";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let lastDrawResult = null;
+let lastPngUrl = null;
 
 function shuffle(items) {
   const copy = [...items];
@@ -179,6 +184,10 @@ async function draw(level) {
     await new Promise(resolve => setTimeout(resolve, 900));
     const selected = shuffle(data).slice(0, count);
     showUnits(selected, level);
+    lastDrawResult = { units: selected, level: level, drawnAt: new Date() };
+    document.getElementById("png-area").hidden = false;
+    document.getElementById("png-status").textContent = "";
+    document.getElementById("png-download").hidden = true;
     saveDrawHistory(selected, level);
     message.textContent = "LEVEL " + level + " のカプセルが " + selected.length + " 個出ました！";
   } catch (error) {
@@ -187,6 +196,125 @@ async function draw(level) {
     message.textContent = "読み込みエラー：" + detail;
   } finally {
     buttons.forEach(button => button.disabled = false);
+  }
+}
+
+function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+  const words = Array.from(String(text || ""));
+  let line = "";
+  let lines = [];
+  for (const char of words) {
+    const test = line + char;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = char;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  if (lines.length > maxLines) {
+    lines = lines.slice(0, maxLines);
+    let last = lines[maxLines - 1];
+    while (last.length && ctx.measureText(last + "…").width > maxWidth) last = last.slice(0, -1);
+    lines[maxLines - 1] = last + "…";
+  }
+  lines.forEach((part, index) => ctx.fillText(part, x, y + index * lineHeight));
+  return lines.length * lineHeight;
+}
+function loadCardImage(url) {
+  return new Promise(resolve => {
+    if (!url) return resolve(null);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+    setTimeout(() => resolve(null), 8000);
+  });
+}
+async function makeResultPng() {
+  const status = document.getElementById("png-status");
+  const link = document.getElementById("png-download");
+  if (!lastDrawResult || !lastDrawResult.units.length) {
+    status.textContent = "先にガチャを回してください。";
+    return;
+  }
+  status.textContent = "カード画像を作成しています…";
+  link.hidden = true;
+  try {
+    const result = lastDrawResult;
+    const width = 1000;
+    const cardHeight = 470;
+    const headerHeight = 190;
+    const gap = 28;
+    const height = headerHeight + result.units.length * (cardHeight + gap) + 40;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#171b2b";
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "#f5d36b";
+    ctx.font = "bold 64px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("D．D", width / 2, 82);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "30px sans-serif";
+    ctx.fillText("抽選結果カード", width / 2, 135);
+    ctx.font = "22px sans-serif";
+    ctx.fillStyle = "#c5c9d8";
+    ctx.fillText("抽選日時：" + result.drawnAt.toLocaleString("ja-JP"), width / 2, 174);
+    for (let i = 0; i < result.units.length; i++) {
+      const unit = result.units[i];
+      const top = headerHeight + i * (cardHeight + gap);
+      ctx.fillStyle = "#292f46";
+      ctx.strokeStyle = "#f5d36b";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.roundRect(35, top, width - 70, cardHeight, 24);
+      ctx.fill();
+      ctx.stroke();
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#f5d36b";
+      ctx.font = "bold 34px sans-serif";
+      ctx.fillText("LEVEL " + result.level, 75, top + 65);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 48px sans-serif";
+      drawWrappedText(ctx, unit.name || "名前未設定", 75, top + 125, 850, 58, 1);
+      const img = await loadCardImage(unit.image_url);
+      if (img) {
+        const boxX = 75, boxY = top + 155, boxW = 330, boxH = 260;
+        const scale = Math.min(boxW / img.width, boxH / img.height);
+        const drawW = img.width * scale, drawH = img.height * scale;
+        ctx.fillStyle = "#20263a";
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+        ctx.drawImage(img, boxX + (boxW - drawW) / 2, boxY + (boxH - drawH) / 2, drawW, drawH);
+      } else {
+        ctx.fillStyle = "#20263a";
+        ctx.fillRect(75, top + 155, 330, 260);
+        ctx.fillStyle = "#aeb6ce";
+        ctx.font = "24px sans-serif";
+        ctx.fillText("画像なし", 185, top + 292);
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "27px sans-serif";
+      ctx.fillText("ユニット説明", 455, top + 205);
+      ctx.fillStyle = "#dce1f2";
+      ctx.font = "24px sans-serif";
+      drawWrappedText(ctx, unit.description || "説明はまだ登録されていません。", 455, top + 255, 455, 38, 5);
+    }
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+    if (!blob) throw new Error("PNG画像を作成できませんでした。");
+    if (lastPngUrl) URL.revokeObjectURL(lastPngUrl);
+    lastPngUrl = URL.createObjectURL(blob);
+    link.href = lastPngUrl;
+    link.download = "DD_result_" + Date.now() + ".png";
+    link.hidden = false;
+    status.textContent = "カード画像ができました。下の緑色のリンクを押してください。";
+  } catch (error) {
+    console.error("D.D PNG export error:", error);
+    status.textContent = "画像作成エラー：" + (error && error.message ? error.message : String(error));
   }
 }
 
