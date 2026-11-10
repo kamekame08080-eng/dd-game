@@ -515,6 +515,13 @@ async function switchDicePlayer(player) {
   saveActiveDicePlayerState();
   activeDicePlayer = player;
   updateTurnPlayerDisplay();
+  updateDrawControls();
+  const gachaResults = document.getElementById("results");
+  if (gachaResults) gachaResults.replaceChildren();
+  const pngArea = document.getElementById("png-area");
+  if (pngArea) pngArea.hidden = true;
+  const historyList = document.getElementById("history-list");
+  if (historyList && !historyList.hidden) renderDrawHistory();
   document.getElementById("dice-outcomes").replaceChildren();
   ["red","blue","yellow","metal"].forEach(color => {
     const result = document.getElementById("dice-result-" + color);
