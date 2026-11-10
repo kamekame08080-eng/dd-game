@@ -129,6 +129,14 @@ button:disabled { opacity:.55; cursor:wait; }
 <button id="support-open" type="button" onclick="toggleGameSupport()">ゲームサポートを開く</button>
 
 <main id="main-page">
+<section class="dice-area" style="margin:16px auto;max-width:600px;">
+  <h3>🎮 ガチャを引くプレイヤー</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <button id="gacha-player-a" type="button" onclick="switchDicePlayer('a')">PLAYER 1</button>
+    <button id="gacha-player-b" type="button" onclick="switchDicePlayer('b')">PLAYER 2</button>
+  </div>
+  <p id="gacha-player-status" class="small" style="color:#f5d36b;font-weight:bold;">PLAYER 1 のガチャ</p>
+</section>
 <div class="machines">
   <div class="machine">
     <h2>LEVEL 1</h2><div class="capsule lv1"></div>
@@ -476,7 +484,7 @@ let level4Units = [];
 const diceFaceLabels = ["⭐","1/2","1/2","1/2","1","3"];
 const diceAssignments = {red:"",blue:"",yellow:"",metal:""};
 const diceSpecialUnits = {red:false,blue:false,yellow:false,metal:false};
-let activeDicePlayer = "a";
+let activeDicePlayer = (() => { try { return localStorage.getItem("dd_active_player_v1") === "b" ? "b" : "a"; } catch (error) { return "a"; } })();
 const dicePlayerStates = {a:null,b:null};
 let diceIsRolling = false;
 function saveActiveDicePlayerState() {
@@ -491,8 +499,16 @@ function updateTurnPlayerDisplay() {
   const b = document.getElementById("turn-player-b");
   if (a) { a.style.background = activeDicePlayer === "a" ? "#35bd75" : "#59617d"; a.style.color = "#fff"; }
   if (b) { b.style.background = activeDicePlayer === "b" ? "#35bd75" : "#59617d"; b.style.color = "#fff"; }
+  const playerNumber = activeDicePlayer === "a" ? "1" : "2";
   const status = document.getElementById("turn-player-status");
-  if (status) status.textContent = "PLAYER " + (activeDicePlayer === "a" ? "1" : "2") + " のターン";
+  if (status) status.textContent = "PLAYER " + playerNumber + " のターン";
+  const gachaStatus = document.getElementById("gacha-player-status");
+  if (gachaStatus) gachaStatus.textContent = "PLAYER " + playerNumber + " のガチャ";
+  ["a","b"].forEach(player => {
+    const button = document.getElementById("gacha-player-" + player);
+    if (button) { button.style.background = activeDicePlayer === player ? "#35bd75" : "#59617d"; button.style.color = "#fff"; }
+  });
+  try { localStorage.setItem("dd_active_player_v1",activeDicePlayer); } catch (error) {}
 }
 async function switchDicePlayer(player) {
   if (diceIsRolling || player === activeDicePlayer) return;
@@ -510,9 +526,23 @@ async function switchDicePlayer(player) {
   document.getElementById("dice-status").textContent = "PLAYER " + (activeDicePlayer === "a" ? "1" : "2") + " のダイス設定を読み込みました。";
 }
 
+function readPlayerDrawHistories() {
+  let histories = null;
+  try { histories = JSON.parse(localStorage.getItem("dd_draw_player_history_v1") || "null"); } catch (error) {}
+  if (!histories || typeof histories !== "object" || Array.isArray(histories)) {
+    let legacy = [];
+    try { legacy = JSON.parse(localStorage.getItem("dd_draw_history_v1") || "[]"); } catch (error) {}
+    histories = {a:Array.isArray(legacy) ? legacy : [],b:[]};
+    try { localStorage.setItem("dd_draw_player_history_v1",JSON.stringify(histories)); } catch (error) {}
+  }
+  if (!Array.isArray(histories.a)) histories.a = [];
+  if (!Array.isArray(histories.b)) histories.b = [];
+  return histories;
+}
 function readDiceHistory() {
   try {
-    const history = JSON.parse(localStorage.getItem("dd_draw_history_v1") || "[]");
+    const histories = readPlayerDrawHistories();
+    const history = histories[activeDicePlayer];
     let changed = false;
     history.forEach((entry,index) => {
       if (!entry.history_id) {
@@ -520,7 +550,7 @@ function readDiceHistory() {
         changed = true;
       }
     });
-    if (changed) localStorage.setItem("dd_draw_history_v1", JSON.stringify(history));
+    if (changed) { histories[activeDicePlayer] = history; localStorage.setItem("dd_draw_player_history_v1",JSON.stringify(histories)); }
     return history;
   } catch (error) {
     console.error("D.D dice history read error:", error);
@@ -731,24 +761,32 @@ updateTurnPlayerDisplay();
 let lastDrawResult = null;
 let lastPngUrl = null;
 const MAX_GAME_DRAWS = 15;
-const GAME_DRAWS_KEY = "dd_game_draws_used_v1";
+const GAME_DRAWS_KEY = "dd_game_draws_player_v1";
+let gameDrawCounts = {a:0,b:0};
 let gameDrawsUsed = 0;
 loadGameDrawCount();
 
 function loadGameDrawCount() {
   try {
-    const saved = Number(localStorage.getItem(GAME_DRAWS_KEY) || 0);
-    gameDrawsUsed = Number.isFinite(saved) ? Math.max(0, Math.min(MAX_GAME_DRAWS, Math.floor(saved))) : 0;
-  } catch (error) {
-    gameDrawsUsed = 0;
-  }
+    const raw = localStorage.getItem(GAME_DRAWS_KEY);
+    if (raw && raw.trim().startsWith("{")) {
+      const saved = JSON.parse(raw);
+      ["a","b"].forEach(player => gameDrawCounts[player] = Math.max(0,Math.min(MAX_GAME_DRAWS,Math.floor(Number(saved[player]) || 0))));
+    } else {
+      const legacy = Math.max(0,Math.min(MAX_GAME_DRAWS,Math.floor(Number(raw) || 0)));
+      gameDrawCounts = {a:legacy,b:0};
+      localStorage.setItem(GAME_DRAWS_KEY,JSON.stringify(gameDrawCounts));
+    }
+  } catch (error) { gameDrawCounts = {a:0,b:0}; }
+  gameDrawsUsed = gameDrawCounts[activeDicePlayer];
   updateDrawControls();
 }
 function updateDrawControls() {
+  gameDrawsUsed = gameDrawCounts[activeDicePlayer] || 0;
   const remaining = Math.max(0, MAX_GAME_DRAWS - gameDrawsUsed);
   const display = document.getElementById("remaining-draws");
   const quantity = document.getElementById("quantity");
-  if (display) display.textContent = "このゲームで引ける残りユニット数：" + remaining + "体";
+  if (display) display.textContent = "PLAYER " + (activeDicePlayer === "a" ? "1" : "2") + " のガチャ残り：" + remaining + "体";
   if (quantity) {
     quantity.max = String(Math.max(1, Math.min(MAX_GAME_DRAWS, remaining)));
     if (Number(quantity.value) > remaining && remaining > 0) {
@@ -763,9 +801,10 @@ function updateDrawControls() {
   if (remaining === 0 && display) display.textContent = "このゲームのガチャは終了しました。新しいゲームを始めてください。";
 }
 function startNewGame() {
-  if (!confirm("新しいゲームを始めますか？ ガチャの残り回数が15体に戻ります。")) return;
+  if (!confirm("PLAYER " + (activeDicePlayer === "a" ? "1" : "2") + " の新しいゲームを始めますか？ ガチャの残り回数が15体に戻ります。")) return;
   gameDrawsUsed = 0;
-  try { localStorage.setItem(GAME_DRAWS_KEY, "0"); } catch (error) {}
+  gameDrawCounts[activeDicePlayer] = 0;
+  try { localStorage.setItem(GAME_DRAWS_KEY,JSON.stringify(gameDrawCounts)); } catch (error) {}
   document.getElementById("quantity").value = "1";
   document.getElementById("quantity-value").textContent = "1";
   document.getElementById("message").textContent = "新しいゲームを始めました！レベルを選んでガチャを回してください。";
@@ -854,7 +893,8 @@ async function draw(level) {
     document.getElementById("png-download").hidden = true;
     saveDrawHistory(selected, level);
     gameDrawsUsed = Math.min(MAX_GAME_DRAWS, gameDrawsUsed + selected.length);
-    try { localStorage.setItem(GAME_DRAWS_KEY, String(gameDrawsUsed)); } catch (error) {}
+    gameDrawCounts[activeDicePlayer] = gameDrawsUsed;
+    try { localStorage.setItem(GAME_DRAWS_KEY,JSON.stringify(gameDrawCounts)); } catch (error) {}
     updateDrawControls();
     message.textContent = "LEVEL " + level + " のカプセルが " + selected.length + " 個出ました！ 残り " + (MAX_GAME_DRAWS - gameDrawsUsed) + "体です。"
   } catch (error) {
@@ -987,8 +1027,8 @@ async function makeResultPng() {
 
 function saveDrawHistory(units, level) {
   try {
-    const key = "dd_draw_history_v1";
-    const history = JSON.parse(localStorage.getItem(key) || "[]");
+    const histories = readPlayerDrawHistories();
+    const history = histories[activeDicePlayer];
     const drawnAt = new Date().toISOString();
     units.forEach(unit => {
       history.unshift({
@@ -1005,16 +1045,19 @@ function saveDrawHistory(units, level) {
         crest_magic: Number(unit.crest_magic) || 0
       });
     });
-    localStorage.setItem(key, JSON.stringify(history.slice(0, 200)));
+    histories[activeDicePlayer] = history.slice(0, 200);
+    localStorage.setItem("dd_draw_player_history_v1",JSON.stringify(histories));
   } catch (error) {
     console.error("D.D history save error:", error);
     document.getElementById("message").textContent += "（履歴を保存できませんでした）";
   }
 }
 function clearDrawHistory() {
-  if (!confirm("抽選履歴をすべて削除しますか？ この操作は元に戻せません。")) return;
+  if (!confirm("PLAYER " + (activeDicePlayer === "a" ? "1" : "2") + " の抽選履歴をすべて削除しますか？ この操作は元に戻せません。")) return;
   try {
-    localStorage.removeItem("dd_draw_history_v1");
+    const histories = readPlayerDrawHistories();
+    histories[activeDicePlayer] = [];
+    localStorage.setItem("dd_draw_player_history_v1",JSON.stringify(histories));
     ["red","blue","yellow"].forEach(color => {
       diceAssignments[color] = "";
       diceSpecialUnits[color] = false;
@@ -1024,9 +1067,7 @@ function clearDrawHistory() {
       if (checkbox) checkbox.checked = false;
       updateDiceUnitLabel(color);
     });
-    const saved = {};
-    allDiceColors.forEach(color => saved[color] = {history_id:diceAssignments[color],special:diceSpecialUnits[color]});
-    localStorage.setItem("dd_dice_assignments_v1", JSON.stringify(saved));
+    saveActiveDicePlayerState();
     renderDiceAssignments();
     renderDrawHistory();
     updateDiceRollButton();
@@ -1043,13 +1084,7 @@ function toggleHistory() {
 }
 function renderDrawHistory() {
   const list = document.getElementById("history-list");
-  let history = [];
-  try {
-    history = JSON.parse(localStorage.getItem("dd_draw_history_v1") || "[]");
-  } catch (error) {
-    list.textContent = "履歴を読み込めませんでした。";
-    return;
-  }
+  const history = readDiceHistory();
   list.replaceChildren();
   if (!history.length) {
     list.textContent = "まだ抽選履歴はありません。";
