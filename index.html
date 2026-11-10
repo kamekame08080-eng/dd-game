@@ -153,7 +153,7 @@ button:disabled { opacity:.55; cursor:wait; }
 <div id="message">レベルを選んでガチャを回してください！</div>
 <div id="results" aria-live="polite"></div>
 <div id="png-area" hidden><button type="button" onclick="makeResultPng()">抽選結果をカード画像で保存</button><p id="png-status" class="small"></p><a id="png-download" hidden target="_blank" rel="noopener">PNG画像を開く・保存する</a></div>
-<div id="history-area"><button type="button" onclick="toggleHistory()">抽選履歴を見る</button><div id="history-list" hidden></div></div>
+<div id="history-area"><button type="button" onclick="toggleHistory()">抽選履歴を見る</button><button type="button" onclick="clearDrawHistory()" style="margin-left:8px;background:#ff8b96;color:#35151a;">抽選履歴を削除</button><div id="history-list" hidden></div></div>
 <p class="small">ユニットの情報はオンラインデータベースから読み込みます。</p>
 
 
@@ -917,6 +917,31 @@ function saveDrawHistory(units, level) {
   } catch (error) {
     console.error("D.D history save error:", error);
     document.getElementById("message").textContent += "（履歴を保存できませんでした）";
+  }
+}
+function clearDrawHistory() {
+  if (!confirm("抽選履歴をすべて削除しますか？ この操作は元に戻せません。")) return;
+  try {
+    localStorage.removeItem("dd_draw_history_v1");
+    ["red","blue","yellow"].forEach(color => {
+      diceAssignments[color] = "";
+      diceSpecialUnits[color] = false;
+      const select = document.getElementById("dice-unit-" + color);
+      const checkbox = document.getElementById("dice-special-" + color);
+      if (select) select.value = "";
+      if (checkbox) checkbox.checked = false;
+      updateDiceUnitLabel(color);
+    });
+    const saved = {};
+    allDiceColors.forEach(color => saved[color] = {history_id:diceAssignments[color],special:diceSpecialUnits[color]});
+    localStorage.setItem("dd_dice_assignments_v1", JSON.stringify(saved));
+    renderDiceAssignments();
+    renderDrawHistory();
+    updateDiceRollButton();
+    document.getElementById("message").textContent = "抽選履歴を削除しました。";
+  } catch (error) {
+    console.error("D.D history clear error:", error);
+    alert("抽選履歴を削除できませんでした。");
   }
 }
 function toggleHistory() {
