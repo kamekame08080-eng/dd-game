@@ -198,6 +198,12 @@ button:disabled { opacity:.55; cursor:wait; }
   <p class="small">プレイヤーごとの重要ユニットのライフを管理します。</p>
 
   <div class="dice-area">
+    <h3>🎮 プレイヤーのターン</h3>
+    <div class="turn-switch" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 18px;">
+      <button id="turn-player-a" type="button" onclick="switchDicePlayer('a')">PLAYER 1</button>
+      <button id="turn-player-b" type="button" onclick="switchDicePlayer('b')">PLAYER 2</button>
+    </div>
+    <p id="turn-player-status" style="color:#f5d36b;font-weight:bold;">PLAYER 1 のターン</p>
     <h3>🎲 召喚サイコロ</h3>
     <p class="dice-help">赤・青・黄色は抽選履歴から選択します。メタリックダイスには管理者メニューで登録したLEVEL 4を割り当てます。</p>
     <button id="dice-add-metal" class="dice-add-button" type="button" onclick="toggleMetalDice()">＋ メタリックダイスを追加</button>
@@ -461,7 +467,39 @@ let level4Units = [];
 const diceFaceLabels = ["⭐","1/2","1/2","1/2","1","3"];
 const diceAssignments = {red:"",blue:"",yellow:"",metal:""};
 const diceSpecialUnits = {red:false,blue:false,yellow:false,metal:false};
+let activeDicePlayer = "a";
+const dicePlayerStates = {a:null,b:null};
 let diceIsRolling = false;
+function saveActiveDicePlayerState() {
+  dicePlayerStates[activeDicePlayer] = {
+    assignments: Object.fromEntries(allDiceColors.map(color => [color,{history_id:diceAssignments[color],special:diceSpecialUnits[color]}])),
+    metalEnabled: metalDiceEnabled
+  };
+  try { localStorage.setItem("dd_dice_player_states_v1",JSON.stringify(dicePlayerStates)); } catch (error) {}
+}
+function updateTurnPlayerDisplay() {
+  const a = document.getElementById("turn-player-a");
+  const b = document.getElementById("turn-player-b");
+  if (a) { a.style.background = activeDicePlayer === "a" ? "#35bd75" : "#59617d"; a.style.color = "#fff"; }
+  if (b) { b.style.background = activeDicePlayer === "b" ? "#35bd75" : "#59617d"; b.style.color = "#fff"; }
+  const status = document.getElementById("turn-player-status");
+  if (status) status.textContent = "PLAYER " + (activeDicePlayer === "a" ? "1" : "2") + " のターン";
+}
+async function switchDicePlayer(player) {
+  if (diceIsRolling || player === activeDicePlayer) return;
+  saveActiveDicePlayerState();
+  activeDicePlayer = player;
+  updateTurnPlayerDisplay();
+  document.getElementById("dice-outcomes").replaceChildren();
+  ["red","blue","yellow","metal"].forEach(color => {
+    const result = document.getElementById("dice-result-" + color);
+    const cube = document.getElementById("dice-cube-" + color);
+    if (result) result.textContent = "—";
+    if (cube) cube.style.transform = "";
+  });
+  await renderDiceAssignments();
+  document.getElementById("dice-status").textContent = "PLAYER " + (activeDicePlayer === "a" ? "1" : "2") + " のダイス設定を読み込みました。";
+}
 
 function readDiceHistory() {
   try {
@@ -488,8 +526,18 @@ async function renderDiceAssignments() {
     level4Units = (data || []).map(unit => ({...unit,history_id:"level4-" + unit.id}));
   } catch (error) { console.error("D.D LEVEL 4 units load error:",error); level4Units = []; }
   const available = [...history,...level4Units];
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem("dd_dice_assignments_v1") || "{}") || {}; } catch (error) {}
+  let states = {};
+  try { states = JSON.parse(localStorage.getItem("dd_dice_player_states_v1") || "{}") || {}; } catch (error) {}
+  if (!states.a && !states.b) {
+    let legacy = {};
+    try { legacy = JSON.parse(localStorage.getItem("dd_dice_assignments_v1") || "{}") || {}; } catch (error) {}
+    states.a = {assignments:legacy,metalEnabled:localStorage.getItem("dd_metal_dice_enabled_v1") === "true"};
+    states.b = {assignments:{},metalEnabled:false};
+  }
+  ["a","b"].forEach(player => { if (!states[player]) states[player] = {assignments:{},metalEnabled:false}; });
+  dicePlayerStates.a = states.a; dicePlayerStates.b = states.b;
+  const savedState = dicePlayerStates[activeDicePlayer] || {assignments:{},metalEnabled:false};
+  const saved = savedState.assignments || {};
   allDiceColors.forEach(color => {
     const select = document.getElementById("dice-unit-" + color);
     if (!select) return;
@@ -518,8 +566,9 @@ async function renderDiceAssignments() {
     }
     updateDiceUnitLabel(color, available);
   });
-  try { metalDiceEnabled = localStorage.getItem("dd_metal_dice_enabled_v1") === "true"; } catch (error) {}
+  metalDiceEnabled = !!savedState.metalEnabled;
   applyMetalDiceVisibility();
+  updateTurnPlayerDisplay();
   updateDiceRollButton();
 }
 function updateDiceUnitLabel(color, history) {
@@ -533,13 +582,7 @@ function saveDiceAssignment(color) {
   diceAssignments[color] = document.getElementById("dice-unit-" + color).value;
   const checkbox = document.getElementById("dice-special-" + color);
   diceSpecialUnits[color] = checkbox ? checkbox.checked : false;
-  try {
-    const saved = {};
-    allDiceColors.forEach(key => saved[key] = {history_id:diceAssignments[key],special:diceSpecialUnits[key]});
-    localStorage.setItem("dd_dice_assignments_v1", JSON.stringify(saved));
-  } catch (error) {
-    document.getElementById("dice-status").textContent = "割り当てを保存できませんでした。";
-  }
+  saveActiveDicePlayerState();
   updateDiceUnitLabel(color);
   updateDiceRollButton();
 }
@@ -554,7 +597,7 @@ function applyMetalDiceVisibility() {
 function toggleMetalDice() {
   if (diceIsRolling) return;
   metalDiceEnabled = !metalDiceEnabled;
-  try { localStorage.setItem("dd_metal_dice_enabled_v1",String(metalDiceEnabled)); } catch (error) {}
+  saveActiveDicePlayerState();
   applyMetalDiceVisibility();
   updateDiceRollButton();
   document.getElementById("dice-status").textContent = metalDiceEnabled ? "LEVEL 4のユニットをメタリックダイスに割り当ててください。" : "メタリックダイスをしまいました。";
@@ -658,6 +701,7 @@ async function rollSummonDice() {
 
 renderDiceAssignments();
 loadGameSupportState();
+updateTurnPlayerDisplay();
 let lastDrawResult = null;
 let lastPngUrl = null;
 const MAX_GAME_DRAWS = 15;
