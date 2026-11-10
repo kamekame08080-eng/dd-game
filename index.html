@@ -493,7 +493,7 @@ async function renderDiceAssignments() {
   allDiceColors.forEach(color => {
     const select = document.getElementById("dice-unit-" + color);
     if (!select) return;
-    const options = color === "metal" ? level4Units : available;
+    const options = color === "metal" ? level4Units : history;
     const checkbox = document.getElementById("dice-special-" + color);
     select.replaceChildren();
     const placeholder = document.createElement("option");
