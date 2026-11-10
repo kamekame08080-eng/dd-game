@@ -632,9 +632,25 @@ async function rollSummonDice() {
     }, 1650 + index*90);
   }));
   await Promise.all(animations);
-  results.forEach(result => result.success = isSummonSuccess(result.unit.level,result.face,result.special));
+  // LEVEL 1〜3は赤・青・黄色の3個中、成功条件を満たしたダイスが2個以上なら、
+  // 成功した目のダイスに割り当てたユニットだけを召喚成功にする。
+  const normalResults = results.filter(result => result.color !== "metal" && Number(result.unit.level) !== 4 && !result.special);
+  const individuallySuccessful = normalResults.filter(result => isSummonSuccess(result.unit.level,result.face,result.special));
+  const normalSummonAllowed = individuallySuccessful.length >= 2;
+  results.forEach(result => {
+    if (Number(result.unit.level) === 4) {
+      // LEVEL 4は、どのダイスでも⭐が1個以上出れば成功。
+      result.success = results.some(item => item.face === 0);
+    } else if (result.color === "metal") {
+      result.success = false;
+    } else {
+      result.success = normalSummonAllowed && isSummonSuccess(result.unit.level,result.face,result.special);
+    }
+  });
   showDiceOutcomes(results);
-  document.getElementById("dice-status").textContent = results.length + "個のサイコロの結果が出ました！";
+  const normalStatus = normalSummonAllowed ? "通常ユニットは2個以上成功条件を満たしました。" : "通常ユニットは2個以上成功条件を満たしていないため召喚失敗です。";
+  const level4Status = results.some(result => Number(result.unit.level) === 4) ? (results.some(item => item.face === 0) ? " LEVEL 4は⭐が出たため召喚成功です。" : " LEVEL 4は⭐が出なかったため召喚失敗です。") : "";
+  document.getElementById("dice-status").textContent = normalStatus + level4Status;
   diceIsRolling = false;
   updateDiceRollButton();
 }
