@@ -575,8 +575,9 @@ function getDiceFinalRotation(face) {
   return rotations[face];
 }
 function isSummonSuccess(level, face, special) {
-  if (face === 0) return true;
-  if (Number(level) === 4 || special) return false;
+  // LEVEL 4と「特別ユニット」は⭐のみ成功。
+  if (Number(level) === 4 || special) return face === 0;
+  // 通常ユニットはレベルごとの成功面だけを判定する。
   if (Number(level) === 1) return [1,2,3,4].includes(face);
   if (Number(level) === 2) return [1,2,3].includes(face);
   if (Number(level) === 3) return [0,5].includes(face);
