@@ -43,6 +43,14 @@ button:disabled { opacity:.55; cursor:wait; }
 .life-controls { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
 .life-controls button { padding:9px 13px; font-size:14px; }
 #support-status { min-height:22px; color:#f5d36b; }
+.crest-area { margin-top:22px; padding-top:16px; border-top:1px solid #59617d; }
+.crest-table { width:100%; border-collapse:collapse; margin:12px 0; table-layout:fixed; }
+.crest-table th,.crest-table td { padding:8px 3px; border-bottom:1px solid #59617d; }
+.crest-table th { color:#f5d36b; font-size:14px; }
+.crest-name { text-align:left; font-weight:bold; }
+.crest-count { font-size:18px; font-weight:bold; min-width:24px; display:inline-block; }
+.crest-control { padding:7px 12px; margin:2px; font-size:15px; min-width:38px; }
+.crest-reset { padding:9px 16px; font-size:14px; }
 @media(max-width:380px) { .support-players { gap:7px; } .support-player { padding:14px 5px; } .life-button { font-size:24px; } }
 
 #admin-area { max-width:640px; margin:28px auto; padding:18px; background:#222940; border:1px solid #59617d; border-radius:14px; text-align:left; }
@@ -150,6 +158,43 @@ button:disabled { opacity:.55; cursor:wait; }
   </div>
   <p id="support-status" aria-live="polite">ハートをタップするとライフが1減ります。</p>
   <button type="button" onclick="resetAllLife()">両プレイヤーを3に戻す</button>
+
+  <div class="crest-area">
+    <h2>クレスト管理</h2>
+    <p class="small">獲得したクレストを種類ごとに数えます。＋で追加、－で消費します。</p>
+    <div class="support-players">
+      <div class="support-player">
+        <h3>プレイヤー A</h3>
+        <table class="crest-table">
+          <thead><tr><th>種類</th><th>数</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td class="crest-name">移動</td><td><span class="crest-count" id="crest-a-move">0</span></td><td><button class="crest-control" onclick="changeCrest('a','move',-1)">－</button><button class="crest-control" onclick="changeCrest('a','move',1)">＋</button></td></tr>
+            <tr><td class="crest-name">攻撃</td><td><span class="crest-count" id="crest-a-attack">0</span></td><td><button class="crest-control" onclick="changeCrest('a','attack',-1)">－</button><button class="crest-control" onclick="changeCrest('a','attack',1)">＋</button></td></tr>
+            <tr><td class="crest-name">防御</td><td><span class="crest-count" id="crest-a-defense">0</span></td><td><button class="crest-control" onclick="changeCrest('a','defense',-1)">－</button><button class="crest-control" onclick="changeCrest('a','defense',1)">＋</button></td></tr>
+            <tr><td class="crest-name">召喚</td><td><span class="crest-count" id="crest-a-summon">0</span></td><td><button class="crest-control" onclick="changeCrest('a','summon',-1)">－</button><button class="crest-control" onclick="changeCrest('a','summon',1)">＋</button></td></tr>
+            <tr><td class="crest-name">魔法</td><td><span class="crest-count" id="crest-a-magic">0</span></td><td><button class="crest-control" onclick="changeCrest('a','magic',-1)">－</button><button class="crest-control" onclick="changeCrest('a','magic',1)">＋</button></td></tr>
+          </tbody>
+        </table>
+        <button class="crest-reset" onclick="resetCrests('a')">Aのクレストを0に戻す</button>
+      </div>
+      <div class="support-player">
+        <h3>プレイヤー B</h3>
+        <table class="crest-table">
+          <thead><tr><th>種類</th><th>数</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td class="crest-name">移動</td><td><span class="crest-count" id="crest-b-move">0</span></td><td><button class="crest-control" onclick="changeCrest('b','move',-1)">－</button><button class="crest-control" onclick="changeCrest('b','move',1)">＋</button></td></tr>
+            <tr><td class="crest-name">攻撃</td><td><span class="crest-count" id="crest-b-attack">0</span></td><td><button class="crest-control" onclick="changeCrest('b','attack',-1)">－</button><button class="crest-control" onclick="changeCrest('b','attack',1)">＋</button></td></tr>
+            <tr><td class="crest-name">防御</td><td><span class="crest-count" id="crest-b-defense">0</span></td><td><button class="crest-control" onclick="changeCrest('b','defense',-1)">－</button><button class="crest-control" onclick="changeCrest('b','defense',1)">＋</button></td></tr>
+            <tr><td class="crest-name">召喚</td><td><span class="crest-count" id="crest-b-summon">0</span></td><td><button class="crest-control" onclick="changeCrest('b','summon',-1)">－</button><button class="crest-control" onclick="changeCrest('b','summon',1)">＋</button></td></tr>
+            <tr><td class="crest-name">魔法</td><td><span class="crest-count" id="crest-b-magic">0</span></td><td><button class="crest-control" onclick="changeCrest('b','magic',-1)">－</button><button class="crest-control" onclick="changeCrest('b','magic',1)">＋</button></td></tr>
+          </tbody>
+        </table>
+        <button class="crest-reset" onclick="resetCrests('b')">Bのクレストを0に戻す</button>
+      </div>
+    </div>
+    <p id="crest-status" class="small" aria-live="polite">クレストは各種類0からスタートします。</p>
+    <button type="button" onclick="resetAllCrests()">両プレイヤーのクレストを0に戻す</button>
+  </div>
   <button type="button" onclick="toggleGameSupport()">ガチャページに戻る</button>
 </section>
 
@@ -197,6 +242,38 @@ function resetAllLife() {
   playerLives.b = 3;
   renderLives();
   document.getElementById("support-status").textContent = "両プレイヤーのライフを3に戻しました。";
+}
+const crestTypes = ["move", "attack", "defense", "summon", "magic"];
+const crestNames = { move:"移動", attack:"攻撃", defense:"防御", summon:"召喚", magic:"魔法" };
+const playerCrests = {
+  a: { move:0, attack:0, defense:0, summon:0, magic:0 },
+  b: { move:0, attack:0, defense:0, summon:0, magic:0 }
+};
+function renderCrests() {
+  ["a","b"].forEach(player => crestTypes.forEach(type => {
+    document.getElementById("crest-" + player + "-" + type).textContent = playerCrests[player][type];
+  }));
+}
+function changeCrest(player, type, amount) {
+  const next = Math.max(0, playerCrests[player][type] + amount);
+  if (next === playerCrests[player][type]) {
+    document.getElementById("crest-status").textContent = crestNames[type] + "クレストは0未満にはできません。";
+    return;
+  }
+  playerCrests[player][type] = next;
+  renderCrests();
+  document.getElementById("crest-status").textContent =
+    "プレイヤー " + player.toUpperCase() + " の" + crestNames[type] + "クレスト：" + next;
+}
+function resetCrests(player) {
+  crestTypes.forEach(type => playerCrests[player][type] = 0);
+  renderCrests();
+  document.getElementById("crest-status").textContent = "プレイヤー " + player.toUpperCase() + " のクレストを0に戻しました。";
+}
+function resetAllCrests() {
+  ["a","b"].forEach(player => crestTypes.forEach(type => playerCrests[player][type] = 0));
+  renderCrests();
+  document.getElementById("crest-status").textContent = "両プレイヤーのクレストを0に戻しました。";
 }
 let lastDrawResult = null;
 let lastPngUrl = null;
